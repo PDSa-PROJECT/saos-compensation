@@ -4,6 +4,37 @@ from calendar import monthrange
 from datetime import date
 from pathlib import Path
 
+from pydantic import Field, field_validator
+
+from ..settings import FiniteNumber, NonblankString, Settings
+
+
+class AcquisitionSettings(Settings):
+    """Acquisition values after explicit CLI overrides have been applied."""
+
+    max_age_years: int = Field(gt=0)
+    max_pages: int = Field(ge=0)
+    max_gib: FiniteNumber = Field(ge=0)
+    debug: bool
+    download_path: NonblankString
+    timeout: FiniteNumber = Field(gt=0)
+
+    @field_validator("download_path")
+    @classmethod
+    def relative_output_path(cls, value):
+        """Preserve repository-relative output paths without normalizing their text.
+
+        args:
+            cls: Acquisition settings class.
+            value: Nonblank output path.
+
+        returns:
+            The unchanged safe relative path.
+        """
+        if Path(value).is_absolute() or ".." in Path(value).parts:
+            raise ValueError("download_path must be relative to the project root")
+        return value
+
 
 def search_settings(config, today=None):
     """
@@ -16,38 +47,8 @@ def search_settings(config, today=None):
     returns:
         Start date, end date and effective query parameters.
     """
-    if not isinstance(config, dict) or set(config) != {
-        "max_age_years",
-        "max_pages",
-        "max_gib",
-        "debug",
-        "download_path",
-        "timeout",
-    }:
-        raise ValueError(
-            "api.yaml requires max_age_years, max_pages, max_gib, debug, download_path and timeout"
-        )
-    if type(config["max_gib"]) not in (int, float) or not 0 <= config[
-        "max_gib"
-    ] < float("inf"):
-        raise ValueError("max_gib must be a nonnegative finite number")
-    if type(config["timeout"]) not in (int, float) or not 0 < config["timeout"] < float(
-        "inf"
-    ):
-        raise ValueError("timeout must be a positive finite number")
-    if type(config["debug"]) is not bool:
-        raise ValueError("debug must be true or false")
-    years, limit = config["max_age_years"], config["max_pages"]
-    if type(years) is not int or years <= 0 or type(limit) is not int or limit < 0:
-        raise ValueError("max_age_years must be positive and max_pages nonnegative")
-    path = config["download_path"]
-    if (
-        not isinstance(path, str)
-        or not path.strip()
-        or Path(path).is_absolute()
-        or ".." in Path(path).parts
-    ):
-        raise ValueError("download_path must be relative to the project root")
+    settings = AcquisitionSettings.from_mapping(config)
+    years = settings.max_age_years
     end = today or date.today()
     if years >= end.year:
         raise ValueError("max_age_years exceeds the supported date range")
