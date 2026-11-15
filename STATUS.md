@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Separate GitHub Actions workflows provide Python lint (Ruff on src/) and Python tests (full pytest suite) checks for PRs to main, pushes to main and merge groups. Ruff is locked in the dev dependency group. Local validation: lint passed; 494 tests passed and four skipped, with three existing SWIG warnings. Merge protection remains disabled by request and can later require both named checks. GitHub-hosted validation is pending.
+
 Recognized full denials now establish confirmed zero-valued targets and proceed through ordinary predictor validation. Every retained record requires accepted source-backed damage evidence; configuration must include damage. Extraction version 31 requires a fresh output path. Published in PR #59 (https://github.com/kalmary/saos-compensation/pull/59) targeting main, assigned to Marcin-Brzykcy.
 
 Native GitHub stack #56 targets main with ordered PRs #49, #48, #53, #54, #55 and #57. PR #57 contains version-30 denial screening and targets refactor/acquisition-rebuild from #55; independent API reads confirmed its position at 6 of 6. The earlier setup had chained branch bases but no native stack membership. PR descriptions now identify the native stack and defer base management to GitHub. No PR was merged and no source or branch history changed.
@@ -40,8 +42,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-07: Renamed vectorization to preprocessing and rebuilt the mixed-feature skeleton around separate text, numeric and categorical modules alongside target transformation. FeatureTransformer coordinates stable field blocks; package exports include configuration and record loading. Updated current documentation and package references. Syntax/import and explicit-placeholder checks passed. Runtime preprocessing and behavioral acceptance tests remain unimplemented.
 
 - 2026-11-07: Re-read issue #47 and replaced the preprocessing skeleton with description-only modules. Removed all placeholder classes/functions/exports, folded feature assembly into the pipeline plan and separated persisted artifacts. Updated PROJECT and README. Checked that all nine Python files contain only short module docstrings; runtime implementation and acceptance tests remain pending.
 
@@ -140,3 +140,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-14: Changed recognized full denials from immediate rejection to confirmed zero-valued targets, preserving source and strict similarity checks and continuing feature extraction. Required source-backed damage for normal and debug records and damage selection at configuration load. Updated acquisition/admission regression tests and documentation; Focused validation passed: 291 tests, one skipped, with three existing SWIG warnings. Existing datasets are preserved; version 31 requires a fresh output path.
 
 - 2026-11-14: Added mutual-settlement and cost-offset templates and eligibility stems to procedural_costs. Local MiniLM verification exposed a 0.83 denial false positive for the supplied cost sentence; denial now must beat competing cost patterns, with cost priority on ties. Both cost examples are excluded, treatment expenses remain a principal award, and explicit full denial still matches. Added controlled routing/tie and denial-target boundary tests. Full-suite validation passed: 494 tests, four skipped, with three existing SWIG warnings. Four local MiniLM examples passed. Published both implementation commits in PR #59 targeting main, assigned to Marcin-Brzykcy; no stored dataset was rewritten.
+
+- 2026-11-15: Added a dedicated Ruff lint workflow and updated the existing test workflow with stable Python lint/Python tests check names, main-targeted PR/push events and merge-group support. Both use Python 3.12, read-only permissions, pinned actions and locked uv dependencies; lint installs only dev tools and checks src/ without formatting changes. Added Ruff configuration/dependency locking and documented local commands and future required-check setup. Local validation: lint passed; full pytest suite passed 494 tests with four skips and three existing SWIG warnings. Application/test code and unrelated local work were preserved using an isolated worktree from current origin/main. GitHub-hosted validation remains pending; branch protection will be enabled later, as requested.
