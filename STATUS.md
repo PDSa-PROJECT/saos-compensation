@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Conventional Commits now define new commit messages and PR titles in CONTRIBUTING.md, referenced by AGENTS.md, README.md and PROJECT.md. This policy-only change leaves application behavior, dependencies and CI unchanged. Automated PR-title validation is deferred until after this policy PR merges; the behavior-preserving Pydantic settings refactor remains planned and unimplemented.
+
 Recognized full denials now establish confirmed zero-valued targets and proceed through ordinary predictor validation. Every retained record requires accepted source-backed damage evidence; configuration must include damage. Extraction version 31 requires a fresh output path. Published in PR #59 (https://github.com/kalmary/saos-compensation/pull/59) targeting main, assigned to Marcin-Brzykcy.
 
 Native GitHub stack #56 targets main with ordered PRs #49, #48, #53, #54, #55 and #57. PR #57 contains version-30 denial screening and targets refactor/acquisition-rebuild from #55; independent API reads confirmed its position at 6 of 6. The earlier setup had chained branch bases but no native stack membership. PR descriptions now identify the native stack and defer base management to GitHub. No PR was merged and no source or branch history changed.
@@ -40,8 +42,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-07: Renamed vectorization to preprocessing and rebuilt the mixed-feature skeleton around separate text, numeric and categorical modules alongside target transformation. FeatureTransformer coordinates stable field blocks; package exports include configuration and record loading. Updated current documentation and package references. Syntax/import and explicit-placeholder checks passed. Runtime preprocessing and behavioral acceptance tests remain unimplemented.
 
 - 2026-11-07: Re-read issue #47 and replaced the preprocessing skeleton with description-only modules. Removed all placeholder classes/functions/exports, folded feature assembly into the pipeline plan and separated persisted artifacts. Updated PROJECT and README. Checked that all nine Python files contain only short module docstrings; runtime implementation and acceptance tests remain pending.
 
@@ -140,3 +140,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-14: Changed recognized full denials from immediate rejection to confirmed zero-valued targets, preserving source and strict similarity checks and continuing feature extraction. Required source-backed damage for normal and debug records and damage selection at configuration load. Updated acquisition/admission regression tests and documentation; Focused validation passed: 291 tests, one skipped, with three existing SWIG warnings. Existing datasets are preserved; version 31 requires a fresh output path.
 
 - 2026-11-14: Added mutual-settlement and cost-offset templates and eligibility stems to procedural_costs. Local MiniLM verification exposed a 0.83 denial false positive for the supplied cost sentence; denial now must beat competing cost patterns, with cost priority on ties. Both cost examples are excluded, treatment expenses remain a principal award, and explicit full denial still matches. Added controlled routing/tie and denial-target boundary tests. Full-suite validation passed: 494 tests, four skipped, with three existing SWIG warnings. Four local MiniLM examples passed. Published both implementation commits in PR #59 targeting main, assigned to Marcin-Brzykcy; no stored dataset was rewritten.
+
+- 2026-11-15: Introduced CONTRIBUTING.md with Conventional Commit types, optional scopes, breaking-change markers, PR-title and squash-subject rules, and examples. Linked the policy from AGENTS.md, README.md and PROJECT.md on a dedicated docs/conventional-commits branch. No application code, configuration, dependencies, workflows or existing history changed. Reviewed documentation links and examples; git diff --check passed. Runtime tests are not needed for this documentation-only change. Automated PR-title checking is deferred until after this policy PR merges; the Pydantic BaseSettings refactor remains unimplemented.

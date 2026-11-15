@@ -63,6 +63,7 @@ The current interface is `configs/dataset/api.yaml` for acquisition and `configs
 
 # Engineering rules
 
+- Follow `CONTRIBUTING.md` for Conventional Commit messages and pull request titles. Use `<type>[optional scope][!]: <description>` for new work, preserve existing history, and use the PR title as the squash commit subject when squash-merging.
 - Read `PROJECT.md` and the relevant implementation, tests, fixtures, configuration, and documentation before editing.
 - Keep `PROJECT.md` current after behavior or design changes. Edit or replace outdated statements in their existing sections; do not append contradictory updates or maintain a history there. Dated history belongs in `STATUS.md`.
 - Use English for implementation identifiers, configuration keys, comments, docstrings, errors and diagnostics. Retain Polish only where required by model-facing prompts/schema identifiers, source-text matching, original evidence or Polish-text analysis. New metadata names and machine-readable status values must be English.

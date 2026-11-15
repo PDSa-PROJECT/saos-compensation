@@ -3,6 +3,10 @@
 A project for estimating compensation awarded in Polish court judgments. The implemented pipeline downloads judgments from SAOS, selects compensation cases, extracts factual predictors and produces one monetary regression target per retained case.
 Numeric/categorical preprocessing and reversible target transformations are available as a Python API. PostgreSQL/pgvector ingestion, combined embedding/tabular inputs, regression training, evaluation and prediction are planned. Extracted records still need independent target and leakage review before training.
 
+## Contributing
+
+Use Conventional Commits for new commit messages and pull request titles. See [CONTRIBUTING.md](CONTRIBUTING.md) for types, examples and breaking-change conventions.
+
 ## Repository structure
 
 Directories only; entries marked `not implemented` describe planned components and may not exist yet. Runtime caches and local outputs are shown without their generated contents.
