@@ -1,7 +1,26 @@
 # SAOS Compensation
 
-A project for estimating compensation awarded in Polish court judgments. The implemented pipeline downloads judgments from SAOS, selects compensation cases, extracts factual predictors and produces one monetary regression target per retained case.
-Numeric/categorical preprocessing and reversible target transformations are available as a Python API. PostgreSQL/pgvector ingestion, combined embedding/tabular inputs, regression training, evaluation and prediction are planned. Extracted records still need independent target and leakage review before training.
+## About
+
+A study project for building a regression model that estimates compensation awarded in Polish court judgments published through SAOS.
+
+The current implementation prepares datasets and provides preprocessing utilities. Compensation prediction is not implemented yet.
+
+## Roadmap
+
+- [x] Download and filter judgments from SAOS
+- [x] Extract factual predictors and monetary targets
+- [x] Support resumable acquisition and local storage
+- [x] Provide reusable text embeddings and tabular/target preprocessing
+- [ ] Evaluate extraction accuracy and target leakage on labeled examples
+- [ ] Implement grouped train/validation/test splits
+- [ ] Combine text embeddings and tabular features
+- [ ] Train and evaluate a baseline regression model
+- [ ] Support YAML-configured alternative regression models
+- [ ] Implement compensation prediction
+- [ ] Add PostgreSQL/pgvector ingestion
+
+Checked means implemented, not independently validated or production-ready.
 
 ## Contributing
 
