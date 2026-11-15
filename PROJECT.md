@@ -4,6 +4,8 @@
 
 Build a reproducible regression pipeline that estimates the compensation awarded in Polish court judgments available through SAOS. This is a study project for a data science course.
 
+README.md is the short entry point and documentation index. Topic guides under docs/ cover acquisition, extraction, preprocessing and development. This document remains the authoritative design/behavior contract; CONTRIBUTING.md owns contribution policy, AGENTS.md owns engineering instructions and STATUS.md records progress/history.
+
 ## Delivery plan
 
 ### 1. Acquire judgments and produce reviewable records
