@@ -12,6 +12,8 @@
 
 These are ordinary module boundaries and explicit dependencies; no container or interface hierarchy is required.
 
+Configuration schemas live in the owning submodule's `settings.py` and share the explicit-source `dataset.settings.Settings` policy. File loaders retain their existing interfaces; see [settings validation](configuration.md#settings-validation) for the schema map and compatibility guarantees.
+
 ## Checks
 
 After syncing the test group:

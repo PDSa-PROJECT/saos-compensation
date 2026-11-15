@@ -59,7 +59,9 @@ This is a regression problem. Do not turn it into judgment classification or gen
 
 YAML configuration is the public experiment interface. Keep data access, preprocessing, feature selection, model choice, and training values out of source code when they vary between experiments.
 
-The current interface is `configs/dataset/api.yaml` for acquisition and `configs/dataset/basal.yaml` for device, feature/target selection and confidence thresholds. Future training settings belong in `configs/train.yaml`, with regression model choices and parameters under `configs/models/` when implemented. Keep references explicit and add a configuration option only when real experiments need different values.
+The current acquisition interface is `configs/dataset/acquisition/` with api.yaml, basal.yaml, features.yaml and targets.yaml; `configs/training/model_input.yaml` selects preprocessing fields. Future training settings belong in `configs/train.yaml`, with regression model choices and parameters under `configs/models/` when implemented. Keep references explicit and add a configuration option only when real experiments need different values.
+
+Define configuration schemas in the owning submodule's settings.py, inheriting the shared `dataset.settings.Settings` BaseSettings policy. Keep YAML and explicit CLI overrides as the only sources; do not enable automatic environment, dotenv, secrets or Pydantic CLI loading. Keep file reading separate from schemas and preserve existing dictionary-returning loader interfaces, numeric types, ordering and checkpoint compatibility. Runtime device checks, date calculations, prompts and fixed transformation policies are not settings sources. See docs/configuration.md for the schema map.
 
 # Engineering rules
 
