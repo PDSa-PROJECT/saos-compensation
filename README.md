@@ -24,38 +24,32 @@ Checked means implemented, not independently validated or production-ready.
 
 ## Repository structure
 
-Directories only; entries marked `not implemented` describe planned components and may not exist yet. Runtime caches and local outputs are shown without their generated contents.
+Tracked project directories, excluding generated outputs and model caches.
 
 ```text
 saos-compensation/
+├── .github/
+│   └── workflows/                 # CI workflows
 ├── configs/                       # experiment configuration
 │   ├── dataset/
 │   │   └── acquisition/           # API, features, targets and Basal settings
 │   └── training/                  # model input feature selection
 ├── src/                           # implementation
-│   ├── dataset/                   # dataset preparation
-│   │   ├── cli/                   # argument parsing and acquisition entry point
-│   │   ├── acquisition/           # resumable downloads, validation and metadata enrichment
-│   │   ├── extraction/            # predictor extraction and validation
-│   │   │   ├── model/             # model configuration, prompts and decision cache
-│   │   │   ├── source/            # source normalization and passage selection
-│   │   │   └── targets/           # monetary parsing and prior-payment extraction
-│   │   ├── embeddings/            # text encoding and target sentence matching
-│   │   ├── storage/               # records, checkpoints, locality snapshots and atomic writes
-│   │   ├── clients/               # HTTP, Basal worker and read-only SQLite integrations
-│   │   └── preprocessing/         # numeric/category encoding and reversible target scaling
-│   ├── architectures/             # regression model definitions — not implemented
-│   ├── training/                  # regression training — not implemented
-│   ├── evaluation/                # regression metrics and error analysis — not implemented
-│   └── inference/                 # compensation prediction — not implemented
+│   └── dataset/                   # dataset preparation
+│       ├── cli/                   # argument parsing and acquisition entry point
+│       ├── acquisition/           # resumable downloads, validation and metadata enrichment
+│       ├── extraction/            # predictor extraction and validation
+│       │   ├── model/             # model configuration, prompts and decision cache
+│       │   ├── source/            # source normalization and passage selection
+│       │   └── targets/           # monetary parsing and prior-payment extraction
+│       ├── embeddings/            # text encoding and target sentence matching
+│       ├── storage/               # records, checkpoints, locality snapshots and atomic writes
+│       ├── clients/               # HTTP, Basal worker and read-only SQLite integrations
+│       └── preprocessing/         # numeric/category encoding and reversible target scaling
 ├── tests/                         # checks grouped by component, with shared fixtures
 ├── fixtures/                      # development snapshots
-├── notebooks/                     # optional local experiments
 ├── data/                          # dataset placeholder
-├── checkpoints/                   # model checkpoints and preprocessing/ fitted state
-├── basal_weights/                 # local Basal weight cache
-├── embedding_weights/             # local embedding weight cache
-└── tmp/                           # default acquisition output and locality cache
+└── checkpoints/                   # model checkpoints and preprocessing/ fitted state
 ```
 
 ## Package boundaries
