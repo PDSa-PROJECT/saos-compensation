@@ -38,7 +38,9 @@ pytorch-cuda-linux = [
 ]
 
 [dependency-groups]
-dev = []
+dev = [
+    "ruff>=0.17.5",
+]
 test = [
     { include-group = "dev" },
     "pytest>=9.1.1",
@@ -46,6 +48,12 @@ test = [
 
 [tool.uv.sources]
 basal = { url = "https://github.com/rkinas/basal/archive/refs/tags/v2.4.1.tar.gz" }
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
