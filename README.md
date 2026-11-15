@@ -22,10 +22,6 @@ The current implementation prepares datasets and provides preprocessing utilitie
 
 Checked means implemented, not independently validated or production-ready.
 
-## Contributing
-
-Use Conventional Commits for new commit messages and pull request titles. See [CONTRIBUTING.md](CONTRIBUTING.md) for types, examples and breaking-change conventions.
-
 ## Repository structure
 
 Directories only; entries marked `not implemented` describe planned components and may not exist yet. Runtime caches and local outputs are shown without their generated contents.
@@ -304,3 +300,7 @@ Feature output contains finite `X`, stable IDs, column names and half-open field
 Embedding similarity is not calibrated legal-role confidence. The full-text denial pass can assign zero based on a quoted request, earlier proceedings or a different claim; speaker and procedural context are not independently verified. The matcher can select the wrong payment or miss an award, and fully written-out monetary amounts are unsupported. Currency recognition covers PLN, zł and grammatical forms of złoty and złotówka. Target matching keeps the beginning of each source sentence and extends its prefix rightward to successive commas or the sentence end. Decimal commas are preserved. After the denial pass, monetary prefixes without a numeric PLN amount and an eligible keyword do not reach target-selection embedding inference. Growth stops at the first comma-delimited part containing a numeric PLN amount, regardless of similarity or keyword eligibility. Later parts are not examined. All keyword-eligible first monetary prefixes are embedded together; the highest-scoring winner per category is retained only when strictly above the configured threshold (default 0.7). Money-free intermediate prefixes are not embedded and have no similarity requirement. This preserves role cues before commas, but context from previous sentences or paragraphs remains unavailable and qualifiers after an accepted prefix are not examined. The target covers only the accepted prefix, so separate awards elsewhere can be omitted. Version 31 requires a fresh output path for older datasets. Extracted facts can still contain relevance or attribution errors despite automated checks.
 
 Before training, manually label a representative sample, measure target/feature quality and review leakage. Then implement grouped train/validation/test splits, fit preprocessing only on training data, vectorize selected fields and train a simple regression baseline. Evaluate MAE/RMSE and errors across courts, regions, dates and target bands. Related judgments and appeals must share a split. PostgreSQL/JSONB/pgvector persistence and configurable alternative regressors remain future work.
+
+## Contributing
+
+Use Conventional Commits for new commit messages and pull request titles. See [CONTRIBUTING.md](CONTRIBUTING.md) for types, examples and breaking-change conventions.
