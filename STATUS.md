@@ -6,7 +6,7 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
-Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests), PR #61 (Conventional Commits and PR-title validation), then PR #63 for documentation work. The initial documentation split was undone. Approved README changes are About, a checkbox Roadmap, moving Contributing unchanged to the end, and a repository tree limited to existing tracked project directories without generated outputs or model caches. Remaining sections retain their original content and await individual approval. Settings refactoring remains paused and unimplemented. No PR was merged and protection settings are unchanged.
+Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests), PR #61 (Conventional Commits and PR-title validation), then PR #63 for documentation work. Approved README changes are About, a checkbox Roadmap, moving Contributing unchanged to the end, a tree of actual project directories, and a short package description linking to docs/development.md. Package implementation details moved to that guide unchanged; remaining sections await individual approval. Settings refactoring remains paused and unimplemented. No PR was merged and protection settings are unchanged.
 
 Conventional Commits define new commit messages and PR titles in CONTRIBUTING.md, referenced by AGENTS.md, README.md and PROJECT.md. PR #61 also adds a PR title workflow for all bases, including stacked PRs, with title-edit support. It checks format and allowed types using event data only, without checking out PR code. Local workflow validation passed 12 valid and 14 invalid title cases, including a shell-injection safety case. Application behavior and dependencies are unchanged; GitHub-hosted validation is pending.
 
@@ -46,8 +46,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-08: Merged feature transformation, validation, column mappings and persistence into FeaturePreprocessor in feature_preprocessor.py, removing features.py and its delegating wrapper. Updated affected state assertions and saved-state checks. Added the README section Data scaling and normalization with per-field representations and moved existing usage documentation into it; updated PROJECT. Artifact format 4 reflects the flattened fitted-state layout; obsolete pickle module layouts now produce an explicit refit error. Validation: all 36 focused preprocessing tests passed; full suite not rerun. Existing acquired records and fitted files were preserved; the pre-existing untracked configs/training directory remains outside this change.
 
 - 2026-11-08: Made configs/training/model_input.yaml the sole model-input configuration as requested. Replaced its stale transformation settings with the current feature_fields-only content and removed the duplicate configs/dataset file. Updated README/PROJECT configuration trees, usage and test paths. Validation: all 36 focused preprocessing tests passed using the new path; full suite not rerun. Transformation rules and acquired records are unchanged.
 
@@ -146,3 +144,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-15: Moved the approved Contributing section to the end of README.md without changing its wording. Verified the move against the preceding commit and checked whitespace; no other README content changed. Documentation-only change in PR #63; remaining sections await approval and settings refactoring remains paused.
 
 - 2026-11-15: Updated only the README repository tree to reflect tracked project directories. Removed nonexistent planned model/training/evaluation/inference and notebook entries, omitted tmp and downloaded model caches, and added existing .github/workflows. Corrected the dataset branch connector under src. No files or directories were removed from disk; only the displayed tree changed. Verified entries against tracked paths and checked whitespace. Other README sections and application behavior are unchanged.
+
+- 2026-11-15: Kept a short dataset package description in README.md and moved the remaining Package boundaries text unchanged into docs/development.md, with navigation links. Added the now-existing docs directory to the repository tree. Verified moved wording, local links and preservation of all content from Setup onward; git diff --check passed. Documentation only; no runtime tests or application changes. Remaining sections await approval.
