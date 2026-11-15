@@ -27,15 +27,17 @@ def test_runtime_dictionary_preserves_yaml_values(config_directory, number):
         None.
     """
     basal = read_config(config_directory / "basal.yaml")
-    basal.update(model=DEFAULTS["system_one"]["model"], minimum_probability=number)
+    basal.update(model=DEFAULTS["system_one"]["model"], device="cpu", minimum_probability=number)
     (config_directory / "basal.yaml").write_text(yaml.safe_dump(basal))
     features = {"metadata_fields": ["instance", "judgment_year"],
                 "text_fields": {"damage": "  Szkoda?  ", "cause": "Przyczyna?"}}
     (config_directory / "features.yaml").write_text(yaml.safe_dump(features, sort_keys=False))
     api = read_config(config_directory / "api.yaml")
-    api.update(max_gib=number, timeout=7, max_pages=-1, debug=True)
+    api.update(max_gib=number, timeout=7, max_pages=-1, debug=True,
+               download_path="tmp/compatibility")
     (config_directory / "api.yaml").write_text(yaml.safe_dump(api))
     targets = read_config(config_directory / "targets.yaml")
+    targets["embedding"].update(device="cpu", batch_size=8)
     targets["embedding"]["minimum_cosine_similarity"] = number
     (config_directory / "targets.yaml").write_text(yaml.safe_dump(targets, sort_keys=False))
     overrides = {"max_pages": 2, "debug": False}

@@ -10,6 +10,7 @@ from dataset.embeddings.settings import EncoderSettings, TargetMatchingSettings,
 from dataset.extraction.model.configuration import load_config, read_config
 from dataset.extraction.model.settings import BasalSettings, FeatureSettings
 from dataset.preprocessing.settings import PreprocessingSettings
+from dataset.settings import RuntimeSettings
 
 
 def test_settings_ignore_environment_dotenv_and_secrets(monkeypatch, tmp_path):
@@ -103,6 +104,13 @@ def test_settings_share_source_and_roundtrip_policy(
     """
     assert issubclass(settings_class, BaseSettings)
     values = read_config(project_root / "configs" / file)
+    runtime = RuntimeSettings()
+    if file.endswith("api.yaml"):
+        values = runtime.merge("acquisition", values)
+    elif file.endswith("basal.yaml"):
+        values = runtime.merge("basal", values)
+    elif file.endswith("targets.yaml"):
+        values["embedding"] = runtime.merge("embedding", values["embedding"])
     if section is not None:
         values = values[section]
     if settings_class is EncoderSettings:
