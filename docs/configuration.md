@@ -53,17 +53,6 @@ The default configuration selects `mps` in **both** `configs/dataset/acquisition
 
 ## Settings validation
 
-YAML and explicit CLI arguments remain the only application settings sources. The acquisition loader reads the same four files, applies only supplied CLI overrides to acquisition values, validates the resulting mappings and returns the existing runtime dictionary. Preprocessing separately reads `configs/training/model_input.yaml`. No environment-variable, `.env`, secrets-directory or automatic Pydantic CLI source is enabled.
+YAML supplies settings; explicit CLI arguments override acquisition values. Environment variables and `.env` files are not settings sources.
 
-All schemas inherit the explicit-input `Settings` subclass of Pydantic `BaseSettings` in [dataset/settings.py](../src/dataset/settings.py). Each submodule owns its schemas:
-
-| Module | Schemas |
-|---|---|
-| [acquisition/settings.py](../src/dataset/acquisition/settings.py) | `AcquisitionSettings` |
-| [embeddings/settings.py](../src/dataset/embeddings/settings.py) | `EncoderSettings`, `TargetMatchingSettings`, `TargetSettings` |
-| [extraction/model/settings.py](../src/dataset/extraction/model/settings.py) | `BasalSettings`, `FeatureSettings` |
-| [preprocessing/settings.py](../src/dataset/preprocessing/settings.py) | `PreprocessingSettings` |
-
-`Settings.from_mapping()` requires a dictionary with exactly the declared fields. Strict types and domain validators reject malformed values without coercing strings/booleans into numbers, stripping question text or changing integer/float types. Standalone encoding still projects its five fields from larger mappings; target matching rejects extra fields. Pattern and feature ordering are preserved.
-
-Existing configuration loaders and validation functions remain the public compatibility entry points and keep their dictionary/None return contracts. Pydantic validation failures remain catchable as `ValueError` and include field locations. Prompts, model revisions and transformation rules stay code-controlled. Date calculations, hardware checks, model loading and fitted-state validation remain outside the settings schemas. The refactor does not change the extraction version, dataset files or checkpoint signatures and does not require a new dataset path by itself.
+Schemas live in `settings.py` under [acquisition](../src/dataset/acquisition/settings.py), [embeddings](../src/dataset/embeddings/settings.py), [extraction/model](../src/dataset/extraction/model/settings.py) and [preprocessing](../src/dataset/preprocessing/settings.py), sharing [dataset.settings.Settings](../src/dataset/settings.py).
