@@ -3,6 +3,8 @@
 import pytest
 
 from dataset.acquisition.settings import AcquisitionSettings
+from dataset.embeddings.settings import TargetSettings
+from dataset.extraction.model.configuration import load_config
 
 
 def test_settings_ignore_environment_dotenv_and_secrets(monkeypatch, tmp_path):
@@ -46,3 +48,23 @@ def test_acquisition_dump_preserves_numeric_types(number):
         "debug": False, "download_path": "tmp/", "timeout": 20,
     })
     assert type(settings.model_dump()["max_gib"]) is type(number)
+
+
+def test_target_settings_preserve_pattern_order_and_reject_control_keys():
+    """Keep tie-breaking order and prevent nested Pydantic source overrides.
+
+    args:
+        None.
+
+    returns:
+        None.
+    """
+    config = load_config()
+    values = {"embedding": config["embedding"], "patterns": config["target_patterns"]}
+    dumped = TargetSettings.from_mapping(values).model_dump()
+    assert dumped == values
+    assert list(dumped["patterns"]) == list(values["patterns"])
+    with pytest.raises(ValueError):
+        TargetSettings.from_mapping({**values, "embedding": {
+            **values["embedding"], "_env_file": "other.env",
+        }})
