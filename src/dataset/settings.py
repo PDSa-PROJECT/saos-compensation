@@ -1,4 +1,4 @@
-"""Shared explicit-input settings policy and non-coercing value constraints."""
+"""Strict domain validation and layered runtime settings."""
 
 import math
 from pathlib import Path

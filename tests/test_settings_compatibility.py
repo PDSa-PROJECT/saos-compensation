@@ -181,8 +181,8 @@ def test_preprocessing_keeps_strict_allowlist(settings):
         validate_config(settings)
 
 
-def test_configuration_ignores_ambient_sources(config_directory, monkeypatch, tmp_path):
-    """Keep configuration independent of environment, dotenv and current directory.
+def test_configuration_ignores_unrelated_ambient_sources(config_directory, monkeypatch, tmp_path):
+    """Ignore unsupported variables and dotenv files outside the configured root.
 
     args:
         config_directory: Explicit YAML directory.
