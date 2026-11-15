@@ -16,7 +16,9 @@ def finite_number(value):
     returns:
         The original finite numeric value.
     """
-    if type(value) not in (int, float) or not math.isfinite(value):
+    if type(value) not in (int, float) or (
+        type(value) is float and not math.isfinite(value)
+    ):
         raise ValueError("Value must be a finite number")
     return value
 

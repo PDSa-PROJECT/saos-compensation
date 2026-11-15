@@ -38,7 +38,7 @@ def test_settings_ignore_environment_dotenv_and_secrets(monkeypatch, tmp_path):
         AcquisitionSettings.from_mapping({**values, "_env_file": str(tmp_path / ".env")})
 
 
-@pytest.mark.parametrize("number", [0, 1, 1.5])
+@pytest.mark.parametrize("number", [0, 1, 1.5, 10**400])
 def test_acquisition_dump_preserves_numeric_types(number):
     """Prevent float coercion from altering serialized settings and cache identities.
 
@@ -50,9 +50,10 @@ def test_acquisition_dump_preserves_numeric_types(number):
     """
     settings = AcquisitionSettings.from_mapping({
         "max_age_years": 10, "max_pages": 0, "max_gib": number,
-        "debug": False, "download_path": "tmp/", "timeout": 20,
+        "debug": False, "download_path": "tmp/", "timeout": number + 1,
     })
     assert type(settings.model_dump()["max_gib"]) is type(number)
+    assert type(settings.model_dump()["timeout"]) is type(number)
 
 
 def test_target_settings_preserve_pattern_order_and_reject_control_keys():
