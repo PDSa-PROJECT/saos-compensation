@@ -1,9 +1,10 @@
 """Shared explicit-input settings policy and non-coercing value constraints."""
 
 import math
+from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import AfterValidator, BeforeValidator
+from pydantic import AfterValidator, BeforeValidator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -101,3 +102,81 @@ class Settings(BaseSettings):
                 "and requires every field"
             )
         return cls.model_validate(value)
+
+
+class RuntimeSettings(BaseSettings):
+    """Machine settings and optional model overrides from the root .env/environment."""
+
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file_encoding="utf-8", extra="ignore", cli_parse_args=False,
+    )
+
+    acquisition_max_gib: Annotated[int | float, AfterValidator(finite_number)] = Field(0.5, ge=0)
+    acquisition_debug: bool = True
+    acquisition_download_path: NonblankString = "tmp/"
+    acquisition_timeout: Annotated[int | float, AfterValidator(finite_number)] = Field(20, gt=0)
+    embedding_device: Device = "mps"
+    embedding_batch_size: int = Field(64, gt=0)
+    embedding_model: NonblankString | None = None
+    embedding_revision: NonblankString | None = None
+    basal_device: Device = "mps"
+    basal_model: NonblankString | None = None
+
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings,
+        file_secret_settings,
+    ):
+        """Give explicit CLI values priority over process environment and dotenv.
+
+        args:
+            cls: Runtime settings class.
+            settings_cls: Settings class supplied by Pydantic.
+            init_settings: Explicit runtime CLI values provided by the loader.
+            env_settings: Process environment values.
+            dotenv_settings: Repository-root dotenv values.
+            file_secret_settings: Unused secrets-directory source.
+
+        returns:
+            CLI, process environment and dotenv sources in priority order.
+        """
+        return init_settings, env_settings, dotenv_settings
+
+    def values_for(self, module, *, explicit_only=False):
+        """Select a module's runtime values without exposing other modules' settings.
+
+        args:
+            self: Loaded runtime settings.
+            module: Acquisition, embedding or basal module prefix.
+            explicit_only: Exclude built-in defaults when applying source overrides.
+
+        returns:
+            Unprefixed field values, excluding unset optional model overrides.
+        """
+        prefix = module + "_"
+        return {
+            name.removeprefix(prefix): value
+            for name, value in self.model_dump(
+                exclude_none=True, exclude_unset=explicit_only,
+            ).items()
+            if name.startswith(prefix)
+        }
+
+    def merge(self, module, values):
+        """Place explicit runtime sources above YAML and built-in defaults below it.
+
+        args:
+            self: Loaded runtime settings.
+            module: Acquisition, embedding or basal module prefix.
+            values: Parsed YAML mapping, including legacy runtime fields if present.
+
+        returns:
+            Effective mapping ready for strict domain-schema validation.
+        """
+        if not isinstance(values, dict):
+            raise ValueError(f"{module} settings must be a mapping")
+        return {
+            **self.values_for(module), **values,
+            **self.values_for(module, explicit_only=True),
+        }
