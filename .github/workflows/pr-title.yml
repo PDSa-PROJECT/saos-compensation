@@ -1,0 +1,35 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Validate Conventional Commit title
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          title = event["pull_request"]["title"]
+          pattern = r"(?:feat|fix|refactor|docs|test|ci|build|perf|style|chore|revert)(?:\([^()\r\n]+\))?!?: \S[^\r\n]*"
+          if re.fullmatch(pattern, title) is None:
+              print("::error::PR title must follow <type>[optional scope][!]: <description>. "
+                    "Use a type from CONTRIBUTING.md, for example refactor(settings): introduce typed settings.")
+              sys.exit(1)
+          print("PR title follows the Conventional Commits format.")
+          PY

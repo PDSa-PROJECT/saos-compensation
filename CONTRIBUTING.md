@@ -45,7 +45,7 @@ The pull request title describes the complete change, not an individual implemen
 
 ## Enforcement
 
-This convention applies to new work. Automated pull request title validation will be added in a separate follow-up after this policy is merged. No commit hooks, release automation or repository protection changes are introduced here. A future title check must also run when a pull request title is edited; requiring that check for merging is a separate GitHub protection setting.
+The `PR title` GitHub Actions check validates the title format and allowed types for all pull requests, including stacked PRs. It runs on creation, title edits, reopening, new commits and transitions from draft to ready for review. The check validates syntax, not whether the description is English or imperative. It reads the event payload without checking out or executing PR code. No commit hooks, release automation or repository protection changes are introduced here; requiring the check for merging is a separate GitHub protection setting.
 
 ## Project guidance
 
