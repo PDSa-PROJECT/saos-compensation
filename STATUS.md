@@ -6,7 +6,11 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests) targets main, followed by PR #61 (Conventional Commits) targeting ci/python-quality-checks. The upper branch includes its parent without rewriting history. Future PR-title validation and behavior-preserving settings refactoring will extend this effort; neither is implemented yet. No PR was merged and protection settings are unchanged.
+
 Conventional Commits now define new commit messages and PR titles in CONTRIBUTING.md, referenced by AGENTS.md, README.md and PROJECT.md. This policy-only change leaves application behavior, dependencies and CI unchanged. Automated PR-title validation is deferred until after this policy PR merges; the behavior-preserving Pydantic settings refactor remains planned and unimplemented.
+
+Separate GitHub Actions workflows provide Python lint (Ruff on src/) and Python tests (full pytest suite) checks for PRs to main, pushes to main and merge groups. Ruff is locked in the dev dependency group. Local validation: lint passed; 494 tests passed and four skipped, with three existing SWIG warnings. Merge protection remains disabled by request and can later require both named checks. GitHub-hosted validation is pending.
 
 Recognized full denials now establish confirmed zero-valued targets and proceed through ordinary predictor validation. Every retained record requires accepted source-backed damage evidence; configuration must include damage. Extraction version 31 requires a fresh output path. Published in PR #59 (https://github.com/kalmary/saos-compensation/pull/59) targeting main, assigned to Marcin-Brzykcy.
 
@@ -42,10 +46,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-07: Re-read issue #47 and replaced the preprocessing skeleton with description-only modules. Removed all placeholder classes/functions/exports, folded feature assembly into the pipeline plan and separated persisted artifacts. Updated PROJECT and README. Checked that all nine Python files contain only short module docstrings; runtime implementation and acceptance tests remain pending.
-
-- 2026-11-07: Inspected five valid tmp/test cases and summarized all 12 valid records (four invalid excluded). All share eight predictors; cause is missing in 9/12, limitations in 5/12 and locality size in 6/12. Year, beneficiary count and prior payment are constant in this sample; totals are numeric strings. Reduced the description-only preprocessing plan from nine files to __init__.py, pipeline.py and targets.py. Checked module descriptions and documentation references. Local data was preserved; target correctness and corpus-wide behavior were not validated.
 
 - 2026-11-07: Re-read issue #47 and corrected the branch scope to encoding and normalization of non-embedding predictors. Replaced the broad pipeline description with features.py covering numeric/categorical transformation and fitted-state reuse; kept reversible target scaling separate. Existing embeddings remain external, to be joined by the future mixed-feature pipeline. Local constants do not constrain supported input values. Verified description-only files; implementation and behavioral checks remain pending.
 
@@ -141,4 +141,8 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 
 - 2026-11-14: Added mutual-settlement and cost-offset templates and eligibility stems to procedural_costs. Local MiniLM verification exposed a 0.83 denial false positive for the supplied cost sentence; denial now must beat competing cost patterns, with cost priority on ties. Both cost examples are excluded, treatment expenses remain a principal award, and explicit full denial still matches. Added controlled routing/tie and denial-target boundary tests. Full-suite validation passed: 494 tests, four skipped, with three existing SWIG warnings. Four local MiniLM examples passed. Published both implementation commits in PR #59 targeting main, assigned to Marcin-Brzykcy; no stored dataset was rewritten.
 
+- 2026-11-15: Added a dedicated Ruff lint workflow and updated the existing test workflow with stable Python lint/Python tests check names, main-targeted PR/push events and merge-group support. Both use Python 3.12, read-only permissions, pinned actions and locked uv dependencies; lint installs only dev tools and checks src/ without formatting changes. Added Ruff configuration/dependency locking and documented local commands and future required-check setup. Local validation: lint passed; full pytest suite passed 494 tests with four skips and three existing SWIG warnings. Application/test code and unrelated local work were preserved using an isolated worktree from current origin/main. GitHub-hosted validation remains pending; branch protection will be enabled later, as requested.
+
 - 2026-11-15: Introduced CONTRIBUTING.md with Conventional Commit types, optional scopes, breaking-change markers, PR-title and squash-subject rules, and examples. Linked the policy from AGENTS.md, README.md and PROJECT.md on a dedicated docs/conventional-commits branch. No application code, configuration, dependencies, workflows or existing history changed. Reviewed documentation links and examples; git diff --check passed. Runtime tests are not needed for this documentation-only change. Automated PR-title checking is deferred until after this policy PR merges; the Pydantic BaseSettings refactor remains unimplemented.
+
+- 2026-11-15: Created native GitHub stack #62 for repository workflow improvements in creation order, PR #60 then PR #61. Retargeted #61 to ci/python-quality-checks and integrated the parent branch without rebasing or force-pushing, preserving both status summaries and log entries. PR descriptions identify stack order and GitHub-managed base handling. Verified stack membership through the REST API and checked the incremental documentation-only diff. No application behavior or protection settings changed, no PR was merged, and runtime tests were not rerun for stack organization. PR-title validation and settings refactoring remain future layers.
