@@ -1,57 +1,63 @@
 # SAOS Compensation
 
-A project for estimating compensation awarded in Polish court judgments. The implemented pipeline downloads judgments from SAOS, selects compensation cases, extracts factual predictors and produces one monetary regression target per retained case.
-Numeric/categorical preprocessing and reversible target transformations are available as a Python API. PostgreSQL/pgvector ingestion, combined embedding/tabular inputs, regression training, evaluation and prediction are planned. Extracted records still need independent target and leakage review before training.
+## About
 
-## Contributing
+A study project for building a regression model that estimates compensation awarded in Polish court judgments published through SAOS.
 
-Use Conventional Commits for new commit messages and pull request titles. See [CONTRIBUTING.md](CONTRIBUTING.md) for types, examples and breaking-change conventions.
+The current implementation prepares datasets and provides preprocessing utilities. Compensation prediction is not implemented yet.
+
+## Roadmap
+
+- [x] Download and filter judgments from SAOS
+- [x] Extract factual predictors and monetary targets
+- [x] Support resumable acquisition and local storage
+- [x] Provide reusable text embeddings and tabular/target preprocessing
+- [ ] Evaluate extraction accuracy and target leakage on labeled examples
+- [ ] Implement grouped train/validation/test splits
+- [ ] Combine text embeddings and tabular features
+- [ ] Train and evaluate a baseline regression model
+- [ ] Support YAML-configured alternative regression models
+- [ ] Implement compensation prediction
+- [ ] Add PostgreSQL/pgvector ingestion
+
+Checked means implemented, not independently validated or production-ready.
 
 ## Repository structure
 
-Directories only; entries marked `not implemented` describe planned components and may not exist yet. Runtime caches and local outputs are shown without their generated contents.
+Tracked project directories, excluding generated outputs and model caches.
 
 ```text
 saos-compensation/
+├── .github/
+│   └── workflows/                 # CI workflows
 ├── configs/                       # experiment configuration
 │   ├── dataset/
 │   │   └── acquisition/           # API, features, targets and Basal settings
 │   └── training/                  # model input feature selection
 ├── src/                           # implementation
-│   ├── dataset/                   # dataset preparation
-│   │   ├── cli/                   # argument parsing and acquisition entry point
-│   │   ├── acquisition/           # resumable downloads, validation and metadata enrichment
-│   │   ├── extraction/            # predictor extraction and validation
-│   │   │   ├── model/             # model configuration, prompts and decision cache
-│   │   │   ├── source/            # source normalization and passage selection
-│   │   │   └── targets/           # monetary parsing and prior-payment extraction
-│   │   ├── embeddings/            # text encoding and target sentence matching
-│   │   ├── storage/               # records, checkpoints, locality snapshots and atomic writes
-│   │   ├── clients/               # HTTP, Basal worker and read-only SQLite integrations
-│   │   └── preprocessing/         # numeric/category encoding and reversible target scaling
-│   ├── architectures/             # regression model definitions — not implemented
-│   ├── training/                  # regression training — not implemented
-│   ├── evaluation/                # regression metrics and error analysis — not implemented
-│   └── inference/                 # compensation prediction — not implemented
+│   └── dataset/                   # dataset preparation
+│       ├── cli/                   # argument parsing and acquisition entry point
+│       ├── acquisition/           # resumable downloads, validation and metadata enrichment
+│       ├── extraction/            # predictor extraction and validation
+│       │   ├── model/             # model configuration, prompts and decision cache
+│       │   ├── source/            # source normalization and passage selection
+│       │   └── targets/           # monetary parsing and prior-payment extraction
+│       ├── embeddings/            # text encoding and target sentence matching
+│       ├── storage/               # records, checkpoints, locality snapshots and atomic writes
+│       ├── clients/               # HTTP, Basal worker and read-only SQLite integrations
+│       └── preprocessing/         # numeric/category encoding and reversible target scaling
 ├── tests/                         # checks grouped by component, with shared fixtures
 ├── fixtures/                      # development snapshots
-├── notebooks/                     # optional local experiments
+├── docs/                          # development documentation
 ├── data/                          # dataset placeholder
-├── checkpoints/                   # model checkpoints and preprocessing/ fitted state
-├── basal_weights/                 # local Basal weight cache
-├── embedding_weights/             # local embedding weight cache
-└── tmp/                           # default acquisition output and locality cache
+└── checkpoints/                   # model checkpoints and preprocessing/ fitted state
 ```
 
 ## Package boundaries
 
-The installed package is `dataset`, discovered under `src/`. `dataset.cli` parses arguments, delegates acquisition to `dataset.acquisition.pipeline.run`, and handles CLI exit codes. Acquisition, extraction, embeddings and preprocessing remain reusable independently of the command.
+The installed package is `dataset`, discovered under `src/`. Acquisition, extraction, embeddings and preprocessing remain reusable independently of the command.
 
-`clients/` owns HTTP access, read-only SQLite queries and the Basal model/worker lifecycle. `storage/` owns local records, checkpoints, pending state, locality snapshots and fitted preprocessing artifacts. Court/date enrichment and admission decisions stay in the domain packages. PostgreSQL and S3 access are not implemented.
-
-`run(config, *, extractor=None, record_source=None)` accepts keyword-only runtime dependencies for extraction and source iteration. By default it uses the existing resumable downloader and a shared Basal worker. Tests and other interfaces can supply an async extraction context and a source iterator factory without replacing imported modules. The extraction context yields a callable accepting judgment text and its identifier; the source factory accepts acquisition settings, checkpoint and run ID, and returns a closable iterator. It must preserve the downloader's durable-output/checkpoint contract when used outside tests.
-
-These are ordinary module boundaries and explicit dependencies; no container or interface hierarchy is required.
+See the [development guide](docs/development.md#package-boundaries) for module responsibilities and runtime dependencies.
 
 ## Setup
 
@@ -104,184 +110,15 @@ This command downloads judgments and runs extraction. There is no download-only 
 
 Explicit arguments override only their corresponding YAML settings. After setup, `uv run get-data --help` also works; the examples use `--no-sync` to keep dependency synchronization separate from execution.
 
-## How get-data pipeline works
+## Documentation
 
-1. Download judgments from SAOS and keep relevant compensation cases.
-2. Find the awarded amount using sentence matching and monetary parsing.
-3. Extract case facts and check their source support and target leakage.
-4. Save accepted records and checkpoint progress for resuming later.
+- [How get-data pipeline works](docs/pipeline.md)
+- [Configuration, models and devices](docs/configuration.md)
+- [Output, admission, resume and storage limits](docs/acquisition.md)
+- [Reusable embeddings](docs/embeddings.md)
+- [Data scaling and normalization](docs/preprocessing.md)
+- [Development and checks](docs/development.md)
 
-```mermaid
-flowchart TD
-    A[SAOS judgments] --> B[Select compensation cases]
-    B --> C["Find award sentence (MiniLM) and parse amount"]
-    B --> D["Extract case facts (BASAL)"]
-    B --> E[Read court and date metadata]
-    C --> F[Regression target]
-    D --> G["Check source support and target leakage (BASAL)"]
-    G --> H[Predictor features]
-    E --> H
-    F --> I[Validate dataset record]
-    H --> I
-    I --> J[Save target and features separately]
-    J --> K[Checkpoint progress]
-```
+## Contributing
 
-## Configs
-
-The implemented configuration and models currently serve data scraping and extraction only. Regression training, evaluation and prediction are not implemented.
-
-The default configuration directory is `configs/dataset/acquisition/`:
-
-| File | Controls |
-|---|---|
-| `api.yaml` | Acquisition dates, page and size limits, output path, debug and HTTP timeout |
-| `features.yaml` | Selected metadata/numeric predictors and text extraction questions |
-| `targets.yaml` | Embedding model/device, candidate keywords, similarity threshold and target/exclusion patterns |
-| `basal.yaml` | Basal model/device and extraction/review thresholds |
-
-The current acquisition defaults are:
-
-| Setting | Default | Meaning |
-|---|---|---|
-| `max_age_years` | `10` | Inclusive judgment-date range ending on the initial run date |
-| `max_pages` | `0` | No page limit; otherwise stop at this total page position across resumes |
-| `max_gib` | `0.5` | Total output-directory limit across runs; `0` disables it |
-| `download_path` | `tmp/` | Output directory relative to the project root (likely to be replaced with database) |
-| `debug` | `true` | Add source/model-call files and retain eligible failed attempts |
-| `timeout` | `20` | HTTP connection/read timeout in seconds |
-
-Explicit CLI arguments override only the corresponding acquisition defaults:
-
-```bash
-uv run --no-sync get-data \
-  --max-age-years 5 \
-  --max-pages 2 \
-  --max-gib 1 \
-  --download-path tmp/dataset-five-years \
-  --timeout 30 \
-  --no-debug
-```
-
-`--debug` enables diagnostics and `--no-debug` overrides a true YAML default. `--config-dir path/to/config` selects another directory containing all four acquisition YAML files. Model and feature settings are changed in YAML.
-
-### Models and devices
-
-The current models are:
-
-- **Remek/basal-2.0-4.5B:** extracts predictors and reviews factuality, relevance and leakage. `basal.yaml` can alternatively select the supported `Remek/basal-2.0-mini` checkpoint. Revisions are pinned in code.
-- **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2:** embeds target patterns and eligible monetary sentences to select a judgment amount sentence.
-
-Missing model files download automatically from Hugging Face and are reused from `basal_weights/` and `embedding_weights/`. Keep these caches outside a size-limited output directory. Locality population enrichment also downloads and caches a GUGiK snapshot under `tmp/gugik/`.
-
-The default configuration selects `mps` in **both** `configs/dataset/acquisition/basal.yaml` and `configs/dataset/acquisition/targets.yaml`. Set both devices to `cpu` or `cuda` for another runtime. Unavailable accelerators fail before acquisition starts.
-
-## Output and admission
-
-```text
-<download_path>/
-├── checkpoint.json
-└── <SAOS_ID>/
-    ├── record.json         # selected predictor values only
-    ├── award.json          # total and valid only
-    ├── source.txt          # debug=true only
-    └── model_calls.json    # debug=true only
-```
-
-Before monetary target selection, every full sentence is compared with the 12 `judgment-denial` patterns, including sentences without PLN amounts or role keywords. A cosine match strictly above the configured threshold (default 0.7) establishes a confirmed zero-valued target only when it also exceeds the best procedural-cost match for that sentence. Cost matches win exact ties. Monetary award parsing is skipped, while factual predictors and metadata are extracted and validated normally. If no denial matches, monetary selection proceeds normally.
-
-`award.json` contains the one regression target `total` in PLN and the boolean `valid`. Normal output requires an admissible target and an accepted source-backed `damage` description (szkoda). Other text fields may remain missing. Debug can retain completed attempts with an unresolved target as `valid: false`, provided accepted damage evidence exists. Cases without accepted damage evidence are discarded even under debug. Missing judgment matches skip text-feature inference unless a denial established a zero target. Source and leakage checks remain active for populated text fields. Training must filter for `valid: true` and independently assess label quality.
-
-`procedural_costs` includes mutual settlement and cost offset patterns, with `rozlicz` and `potrąc` keyword stems. Excluding such a payment does not establish a denial or a zero target; a separate eligible award may still be selected.
-
-Debug adds only `source.txt` and `model_calls.json`; evidence and confidence diagnostics stay out of the two basic files. Rejected cases leave no final case files. Existing artifacts are preserved, so use a fresh output path for a clean dataset layout. Operational summaries are printed to the console.
-
-## Resume and storage limits
-
-Restart the same command after interruption. `checkpoint.json` pins the original date bounds, extraction configuration and locality snapshot hash, and records the next page/item. Saved records are recognized without repeating extraction. Temporary `<SAOS_ID>/pending/` state preserves source/configuration and completed model decisions even with debug disabled; it is removed after acceptance or rejection.
-
-Dates, models, patterns, questions and extraction settings must remain compatible with the checkpoint. Use a new output path for a changed experiment or an older extractor version. The current extractor version is **31**. Debug, timeout, size and page limits may change during a resume; increasing the page limit continues acquisition. A fully completed checkpoint performs no further acquisition. Run one process per output directory.
-
-`max_gib` includes existing output, debug files, pending state and atomic temporary writes across resumptions. A refused write stops the run with a resumable checkpoint; increase the limit to continue. A page limit follows dump order and is not random sampling.
-
-## Checks
-
-After syncing the test group:
-
-```bash
-uv run --no-sync pytest -q
-```
-
-Tests are grouped under `tests/acquisition`, `tests/clients`, `tests/storage`, `tests/extraction`, `tests/embeddings`, `tests/preprocessing` and `tests/cli`. Root fixtures share editable configuration and source payloads; component fixtures isolate acquisition output and model caches. Pytest imports tests through importlib, without adding source directories to the import path.
-
-```bash
-uv run --no-sync pytest tests/acquisition tests/storage -q
-uv run --no-sync pytest tests/cli -q
-uv run --no-sync pytest -m "not cuda and not mps" -q
-uv run --no-sync pytest -m cuda -q
-uv run --no-sync pytest -m mps -q
-```
-
-CUDA/MPS markers select small hardware checks, which skip automatically when their backend is unavailable; they do not download models. The `cpu` marker selects the corresponding CPU numeric check. Local notebook experiments live under `tests/experiments`; their tests skip when legacy inputs are absent. They retain their separate notebook-loading setup.
-
-## Reusable embeddings
-
-```python
-from dataset import load_config
-from dataset.embeddings import create_embeddings
-
-settings = load_config()["embedding"]
-vectors = create_embeddings(["Opis szkody.", "Ograniczenia w pracy."], settings)
-```
-
-`create_embeddings` accepts a nonempty list of nonblank strings and encoder settings (`model`, `revision`, `device`, `batch_size`, `max_length`). It returns an `(N, D)` float32 PyTorch tensor on the selected device, preserving order and original text through all token windows. Encoder loading is lazy and cached for unchanged settings. Target matching applies its own monetary normalization before encoding.
-
-## Data scaling and normalization
-
-Feature transformations and persistence are implemented directly in `feature_preprocessor.py`; target scaling has its own `target_preprocessor.py`.
-
-| Field | Representation |
-|---|---|
-| `cause`, `damage`, `limitations` | Existing text embeddings, with no additional normalization here |
-| `judgment_year` | Final two digits divided by ten: `2025 → [0.2, 0.5]`; integer years 2000–2099 |
-| `injured_party_count` | Original numeric value |
-| `prior_payment` | `log1p`, then training-fitted robust scaling |
-| `instance`, `court_locality_size` | One-hot category vectors |
-| Target `total` | Training-fitted robust scaling, inverted to PLN for evaluation |
-
-The preprocessing utilities use `configs/training/model_input.yaml` only to select original predictor fields. `load_records()` lives in `src/dataset/storage/records.py` and is exported from the package:
-
-```python
-from dataset.preprocessing import (
-    FeaturePreprocessor, TargetPreprocessor, load_config, load_records,
-)
-
-settings = load_config("configs/training/model_input.yaml")
-data = load_records("tmp/test", include_targets=True)
-# data contains aligned raw records, sample_ids and unscaled targets (valid=true only).
-# The caller must create grouped splits and select train_records/train_targets first.
-features = FeaturePreprocessor().fit(train_records, settings)
-target = TargetPreprocessor().fit(train_targets)
-X_train = features.transform(train_records, train_ids)["X"]
-y_train = target.transform(train_targets)
-features.save()  # checkpoints/preprocessing/feature_preprocessor.pkl
-target.save()    # checkpoints/preprocessing/target_preprocessor.pkl
-
-features = FeaturePreprocessor.load(settings=settings)
-target = TargetPreprocessor.load()
-# target.inverse_transform(model_outputs) will recover PLN amounts.
-```
-
-This is a utility API example, not a training/inference implementation. Neither `load_records()` nor the preprocessors create splits, fit a regressor or automatically call one another. `load_records(directory)` without `include_targets` needs no award files. Future training code should call the loader before splitting and fit both preprocessors only on its training rows; future inference can reuse each saved artifact without fitting again.
-
-`model_input.yaml` contains only `feature_fields`, an ordered list before encoding/scaling. It may select `cause`, `damage`, `limitations`, `judgment_year`, `injured_party_count`, `prior_payment`, `instance` and `court_locality_size`. No transformation policies are accepted. Text fields remain separate embeddings with no normalization here; the current feature preprocessor requires at least one selected tabular field.
-
-Feature output contains finite `X`, stable IDs, column names and half-open field-to-column ranges. Fixed rules in `transforms/rules.py` are: year → final two digits divided by ten (2000–2099), count unchanged, prior payment → log1p plus training-fitted robust scaling, nominal categories → one-hot. Missing numbers raise; missing categories get a dedicated column and unseen categories an all-zero block. Target preprocessing separately subtracts the training-target median and divides by the training interquartile range, without log transformation; inverse transformation returns PLN. For [100, 200, 300], the scaled targets are [-1, 0, 1]. Zero-range protection is provided by scikit-learn. Scaling does not establish feature importance.
-
-`preprocessing/io/` handles configuration; `storage/preprocessing.py` persists fitted state; `storage/records.py` loads dataset records; `transforms/` holds shared numeric helpers and fixed rules. Both artifacts use trusted local pickle files and reject incompatible preprocessing/scikit-learn versions. Version-4 artifacts saved with the previous `src.dataset` imports remain loadable. Feature and target files are independent, with no duplicated target object in the feature artifact. Source/debug records are unchanged. Combining tabular output with embeddings remains unimplemented.
-
-## Current limitations and remaining work
-
-Embedding similarity is not calibrated legal-role confidence. The full-text denial pass can assign zero based on a quoted request, earlier proceedings or a different claim; speaker and procedural context are not independently verified. The matcher can select the wrong payment or miss an award, and fully written-out monetary amounts are unsupported. Currency recognition covers PLN, zł and grammatical forms of złoty and złotówka. Target matching keeps the beginning of each source sentence and extends its prefix rightward to successive commas or the sentence end. Decimal commas are preserved. After the denial pass, monetary prefixes without a numeric PLN amount and an eligible keyword do not reach target-selection embedding inference. Growth stops at the first comma-delimited part containing a numeric PLN amount, regardless of similarity or keyword eligibility. Later parts are not examined. All keyword-eligible first monetary prefixes are embedded together; the highest-scoring winner per category is retained only when strictly above the configured threshold (default 0.7). Money-free intermediate prefixes are not embedded and have no similarity requirement. This preserves role cues before commas, but context from previous sentences or paragraphs remains unavailable and qualifiers after an accepted prefix are not examined. The target covers only the accepted prefix, so separate awards elsewhere can be omitted. Version 31 requires a fresh output path for older datasets. Extracted facts can still contain relevance or attribution errors despite automated checks.
-
-Before training, manually label a representative sample, measure target/feature quality and review leakage. Then implement grouped train/validation/test splits, fit preprocessing only on training data, vectorize selected fields and train a simple regression baseline. Evaluate MAE/RMSE and errors across courts, regions, dates and target bands. Related judgments and appeals must share a split. PostgreSQL/JSONB/pgvector persistence and configurable alternative regressors remain future work.
+Use Conventional Commits for new commit messages and pull request titles. See [CONTRIBUTING.md](CONTRIBUTING.md) for types, examples and breaking-change conventions.
