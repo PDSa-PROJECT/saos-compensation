@@ -106,6 +106,7 @@ Expose only values deliberately selected between experiments. Keep technical sou
 - Current outputs: local per-judgment records and a resume checkpoint; diagnostic artifacts only in debug mode.
 - Planned database: PostgreSQL with JSONB and pgvector.
 - Configuration: YAML.
+- Contribution workflow: new commit messages and pull request titles follow Conventional Commits as defined in CONTRIBUTING.md. Squash commit subjects reuse the PR title; existing history is unchanged. The PR title workflow checks syntax and allowed types for all PR bases, including stacked PRs, on creation, edits, reopening, new commits and ready-for-review events. It reads only event data, without checking out PR code. Required-check protection is configured separately in GitHub.
 - Problem type: supervised regression.
 - First model: a simple baseline chosen after the target distribution is inspected.
 - Extraction prototype: pinned Basal model with PyTorch; MPS for local macOS work, CPU/CUDA when selected. Independent labeled evaluation is required before approving extracted training data.
