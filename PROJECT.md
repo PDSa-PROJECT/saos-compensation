@@ -106,12 +106,13 @@ Per-module schemas retain strict dictionary validation through dataset.settings.
 - Local experiments: notebooks/ contents are ignored; only .gitkeep is tracked. Notebook-specific tests skip when local inputs or their legacy configuration are absent.
 - CI: separate GitHub Actions workflows expose Python lint and Python tests checks on pull requests to main, pushes to main and merge groups. Both use Python 3.12 and locked uv dependencies. Lint runs Ruff's E4/E7/E9/F checks on src/ without formatting enforcement; tests run the full pytest suite. Locally, sync with uv sync --locked --group test, then run uv run --no-sync ruff check src and uv run --no-sync pytest separately. Merge protection is configured separately in GitHub; workflows alone do not block merges. When enabled, require both Python lint and Python tests checks.
 - Current outputs: local per-judgment records and a resume checkpoint; diagnostic artifacts only in debug mode.
-- Planned database: PostgreSQL with JSONB and pgvector.
+- Planned database: PostgreSQL with JSONB and pgvector. [ADR 0001](docs/adr/0001-aws-postgresql.md) selects Terraform-managed AWS RDS PostgreSQL in eu-north-1: Single-AZ db.t4g.micro, 20 GB gp3, dedicated VPC, public endpoint restricted by an IP WHITELIST, TLS, RDS-managed credentials, disabled automated backups, deletion protection and a nightly 02:00 Europe/Warsaw stop. Infrastructure and ingestion are not implemented yet.
 - Configuration: YAML.
 - Contribution workflow: new commit messages and pull request titles follow Conventional Commits as defined in CONTRIBUTING.md. Squash commit subjects reuse the PR title; existing history is unchanged. The PR title workflow checks syntax and allowed types for all PR bases, including stacked PRs, on creation, edits, reopening, new commits and ready-for-review events. It reads only event data, without checking out PR code. Required-check protection is configured separately in GitHub.
 - Problem type: supervised regression.
 - First model: a simple baseline chosen after the target distribution is inspected.
 - Extraction prototype: pinned Basal model with PyTorch; MPS for local macOS work, CPU/CUDA when selected. Independent labeled evaluation is required before approving extracted training data.
+- Planned remote model serving: [ADR 0002](docs/adr/0002-asynchronous-model-serving.md) selects Terraform-managed SageMaker Async in eu-north-1 for Basal 2.0 Max (11B), initially targeting ml.g6.xlarge (24 GB GPU), On-Demand, scaling between zero and one instance. The pipeline and embeddings stay local. Instance support and memory fit require validation; precision is undecided. Serving is not implemented and current model/runtime defaults are unchanged.
 
 ## Main risks
 
