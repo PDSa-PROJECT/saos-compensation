@@ -47,6 +47,16 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Terraform local state, provider downloads, variables and saved plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
+crash.log
+crash.*.log
+
 # Package markers in project folders
 !__init__.py
 
