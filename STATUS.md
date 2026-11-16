@@ -6,7 +6,7 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
-Draft PR #64 now separates YAML experiment settings from root .env/runtime settings. Precedence is CLI > process environment > .env > YAML > built-in defaults; supported keys are in .env.example. Model overrides are supported, with an explicit revision required for a changed embedding model. No-override defaults and checkpoint signatures are unchanged. Validation: 580 passed, four skipped; Ruff and CLI help passed. No acquisition or inference was run.
+Draft PR #64 separates YAML experiment settings from root .env/runtime settings. Precedence is CLI > process environment > .env > YAML > built-in defaults; supported keys are in .env.example. Model overrides require an explicit revision for a changed embedding model. Added tests are reduced to five basic checks; the pre-existing tests are retained. Validation: 499 passed, four skipped; Ruff passed. No acquisition or inference was run.
 
 Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests), PR #61 (Conventional Commits and PR-title validation), then PR #63 for documentation work, with typed settings as the next layer. README.md retains the approved overview, roadmap, actual repository tree, short package description, original setup/download/arguments and contribution link. Technical sections moved verbatim to docs/pipeline.md, docs/configuration.md, docs/acquisition.md, docs/embeddings.md, docs/preprocessing.md and docs/development.md, with README links; Current limitations and remaining work was removed as requested. No PR was merged and protection settings are unchanged.
 
@@ -48,8 +48,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-08: Checked refactor/target-search against the locally available origin/main; both point to 1c91d62 with no tracked working-tree changes before this task. The only untracked directories were downloaded model caches: basal_weights (about 12 GB) and embedding_weights (about 458 MB). Added root-level ignore rules for both, preserving all local files. Verified cache paths are ignored and no cache files are tracked. No runtime code changed or tests run; remote refs were not refreshed.
 
 - 2026-11-08: Verified ignored/untracked paths before publishing the refactor/target-search ignore fix. Removed notebooks/.gitkeep and notebooks/01_saos_feasibility.py from the index only because this branch ignores the entire notebooks directory; retained both files locally. Refreshed origin/main and found its newer merged acquisition implementation already ignores caches with placeholders. Main receives a separate rule-order correction so cache __init__.py files cannot escape ignoring. Verified no cache files are tracked; no application code or runtime tests changed.
 
@@ -148,3 +146,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-15: Shortened added settings documentation to source precedence and schema links. Code and main README unchanged; links and whitespace checked.
 
 - 2026-11-15: Implemented the approved YAML/runtime split in draft PR #64. Added root dotenv/environment loading, model/revision overrides and .env.example; retained CLI priority, strict final validation, legacy YAML fallbacks and unchanged defaults. Tests cover precedence, rejected overrides, cwd independence and checkpoint compatibility. Validation: 580 passed, four skipped, Ruff/CLI help passed; default config/signature match the pre-refactor baseline. Updated source guidance briefly; no model inference or dataset changes.
+
+- 2026-11-16: Reduced the settings additions from 86 test cases to five basic checks: source precedence, model overrides, invalid runtime input, example defaults and checkpoint compatibility. Removed duplicated schema/compatibility matrices; pre-existing tests and implementation are unchanged. Validation: 499 passed, four skipped; Ruff and whitespace checks passed.
