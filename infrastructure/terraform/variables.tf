@@ -63,3 +63,13 @@ variable "rds" {
   })
   default = {}
 }
+
+variable "rds_stop_schedule" {
+  description = "Automatic database stop, evaluated in the selected local timezone."
+  type = object({
+    enabled    = optional(bool, true)
+    expression = optional(string, "cron(0 2 * * ? *)")
+    timezone   = optional(string, "Europe/Warsaw")
+  })
+  default = {}
+}

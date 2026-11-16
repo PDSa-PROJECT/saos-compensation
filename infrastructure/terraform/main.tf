@@ -17,9 +17,10 @@ module "rds" {
     aws = aws
   }
 
-  name_prefix  = var.project_name
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.public_subnet_ids
-  ip_whitelist = var.rds_ip_whitelist
-  settings     = var.rds
+  name_prefix   = var.project_name
+  vpc_id        = module.vpc.vpc_id
+  subnet_ids    = module.vpc.public_subnet_ids
+  ip_whitelist  = var.rds_ip_whitelist
+  settings      = var.rds
+  stop_schedule = var.rds_stop_schedule
 }

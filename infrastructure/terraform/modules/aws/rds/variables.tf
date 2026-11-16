@@ -59,3 +59,13 @@ variable "settings" {
     error_message = "Set a final snapshot identifier when final snapshots are enabled."
   }
 }
+
+variable "stop_schedule" {
+  description = "Nightly stop safety net; no automatic start is configured."
+  type = object({
+    enabled    = optional(bool, true)
+    expression = optional(string, "cron(0 2 * * ? *)")
+    timezone   = optional(string, "Europe/Warsaw")
+  })
+  default = {}
+}

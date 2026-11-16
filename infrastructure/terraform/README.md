@@ -47,3 +47,15 @@ RDS manages the master password in Secrets Manager; Terraform outputs only its A
 The PostgreSQL engine supports pgvector, but enabling it and managing application schemas are database migrations, not network provisioning. After connecting, an authorized database administrator can run `CREATE EXTENSION IF NOT EXISTS vector;`. No SQL provider or password retrieval is embedded in Terraform.
 
 Final snapshots are also disabled by default. To keep a final snapshot, set `rds.skip_final_snapshot = false` and provide a unique `rds.final_snapshot_identifier`. Deletion first requires explicitly disabling `rds.deletion_protection`. Neither deletion protection nor disabled automated backups provides recovery from SQL mistakes.
+
+## Database start/stop
+
+EventBridge Scheduler calls `StopDBInstance` directly every night at 02:00 in `Europe/Warsaw`, including daylight-saving adjustments. Its role can stop only this database. Configure `rds_stop_schedule` to change the expression/timezone or disable it. No Lambda or automatic start is created.
+
+Starting the database is an explicit runtime operation, not resource provisioning. With an authorized AWS identity, use the database identifier from `terraform output -json rds`:
+
+```bash
+aws rds start-db-instance --region eu-north-1 --db-instance-identifier saos-compensation-postgres
+```
+
+The nightly call can fail harmlessly when RDS is already stopped or in another non-stoppable state; Scheduler retries are disabled to avoid repeated invalid-state calls. A failure also means a running instance might remain up until the next successful stop; inspect Scheduler delivery metrics and RDS state. This is a safety net, not a spending cap or state-aware idle shutdown. RDS automatically starts after seven consecutive stopped days, and can bill compute until the next nightly stop. Storage, secret and public IPv4 charges continue while stopped.
