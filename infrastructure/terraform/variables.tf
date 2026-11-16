@@ -42,3 +42,24 @@ variable "public_subnet_newbits" {
     error_message = "Subnet prefix extension must be a positive integer."
   }
 }
+
+variable "rds_ip_whitelist" {
+  description = "PostgreSQL IPv4 CIDR WHITELIST; empty blocks all clients."
+  type        = set(string)
+  default     = []
+}
+
+variable "rds" {
+  description = "Managed PostgreSQL settings; engine major versions resolve to an AWS-supported minor version."
+  type = object({
+    engine_version            = optional(string, "17")
+    instance_class            = optional(string, "db.t4g.micro")
+    allocated_storage         = optional(number, 20)
+    database_name             = optional(string, "saos")
+    master_username           = optional(string, "saos_admin")
+    deletion_protection       = optional(bool, true)
+    skip_final_snapshot       = optional(bool, true)
+    final_snapshot_identifier = optional(string)
+  })
+  default = {}
+}

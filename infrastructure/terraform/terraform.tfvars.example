@@ -2,6 +2,15 @@ aws_region   = "eu-north-1"
 project_name = "saos-compensation"
 vpc_cidr     = "10.42.0.0/16"
 
+# Replace with actual public outbound IPv4 CIDRs; an empty WHITELIST denies all clients.
+rds_ip_whitelist = []
+
+rds = {
+  engine_version    = "17"
+  instance_class    = "db.t4g.micro"
+  allocated_storage = 20
+}
+
 tags = {
   Environment = "development"
 }

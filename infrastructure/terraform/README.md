@@ -1,10 +1,11 @@
 # Terraform infrastructure
 
-One root stack composes provider-specific modules. Currently implemented: AWS VPC. RDS and SageMaker modules will be added separately under `modules/aws/rds` and `modules/aws/sage_maker`.
+One root stack composes provider-specific modules. Currently implemented: AWS VPC and RDS. SageMaker will be added separately under `modules/aws/sage_maker`.
 
 ```text
 infrastructure/terraform/       # root stack, backend, providers and inputs
   modules/aws/vpc/              # dedicated VPC and two public subnets
+  modules/aws/rds/              # PostgreSQL, TLS, IP WHITELIST and managed credentials
 ```
 
 Keep provider credentials and configuration in the root stack, not child modules. Future GCP modules can live under `modules/gcp/` with their provider configured at the root; no GCP provider is installed until used. Backend storage is independent of deployment providers.
@@ -31,8 +32,18 @@ For deployment, copy `terraform.tfvars.example` to `terraform.tfvars`, review va
 
 ## Network
 
-The VPC uses DNS support and hostnames, two public subnets in separate available standard availability zones, one internet gateway and a shared public route table. There is no NAT gateway, VPN, bastion or load balancer. Public routing does not authorize inbound access; RDS will receive its own security group and IP WHITELIST in the database module.
+The VPC uses DNS support and hostnames, two public subnets in separate available standard availability zones, one internet gateway and a shared public route table. There is no NAT gateway, VPN, bastion or load balancer. Public routing does not authorize inbound access; RDS has its own security group and IP WHITELIST.
 
 Subnet public-IP auto-assignment is disabled; individual resources must explicitly request public access. The default VPC CIDR is `10.42.0.0/16`; `public_subnet_newbits = 8` derives `10.42.0.0/24` and `10.42.1.0/24`.
 
 Architecture decisions: [database](../../docs/adr/0001-aws-postgresql.md), [model serving](../../docs/adr/0002-asynchronous-model-serving.md).
+
+## PostgreSQL
+
+Defaults: PostgreSQL 17, Single-AZ `db.t4g.micro`, encrypted 20 GiB gp3, no storage autoscaling, no automated backups, deletion protection, public endpoint and enforced TLS. Set `rds_ip_whitelist` to actual client public IPv4 CIDRs before connecting; empty means no client ingress, and /0 is rejected.
+
+RDS manages the master password in Secrets Manager; Terraform outputs only its ARN. Client identities need separately scoped permission to retrieve it. Use the RDS CA certificate bundle and `sslmode=verify-full` when connecting, not encryption without certificate verification. PostgreSQL minor-version upgrades are automatic; resize/settings changes normally wait for the maintenance window because `apply_immediately` is false.
+
+The PostgreSQL engine supports pgvector, but enabling it and managing application schemas are database migrations, not network provisioning. After connecting, an authorized database administrator can run `CREATE EXTENSION IF NOT EXISTS vector;`. No SQL provider or password retrieval is embedded in Terraform.
+
+Final snapshots are also disabled by default. To keep a final snapshot, set `rds.skip_final_snapshot = false` and provide a unique `rds.final_snapshot_identifier`. Deletion first requires explicitly disabling `rds.deletion_protection`. Neither deletion protection nor disabled automated backups provides recovery from SQL mistakes.
