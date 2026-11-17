@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Updated the processing Basal maximum_leak_probability from 0.35 to 0.4. Confirmed the effective configuration loads 0.4; focused configuration/cache/checkpoint tests passed (five passed, one optional replay skipped). Existing processing checkpoints created with the previous threshold require a separate output path. Raw inputs and saved case files were not rewritten.
+
 Verified PR #67 entry points in the primary checkout and refreshed the editable installation from the lockfile: get-raw-data and process-data are registered and callable, with the old get-data script absent. Documented installation refresh after branch switches and obsolete flat-layout metadata. Validation: 18 CLI tests passed and installed metadata matches pyproject.toml. Runtime extraction code is unchanged.
 
 Opened chained PR #67 from split-download-processing into docs/dataset-correctness-review, following PR #66, and assigned Marcin-Brzykcy. Verified the open PR head, base and assignee. No merge was requested.
@@ -56,8 +58,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-08: Integrated current main into refactor/target-search to bring in the acquisition and target-matching implementation before changing sentence growth. Resolved the STATUS conflict by retaining the current implementation summary and both branches latest log entries. Kept main cache/placeholder ignore rules and preserved local notebook/model files. Baseline offline validation passed: 415 tests, three skipped. Target selection behavior is unchanged in this merge.
 
 - 2026-11-08: Implemented right-first/left-fallback growth of money-free target fragments inside the same full sentence. Candidate admission now allows keyword-bearing fragments without local amounts when their full sentence contains numeric PLN evidence. Rank seeds as before; preserve exclusion competition/tie priority and exact source offsets, accept improving money-free context, retry right after helpful left context, and require final monetary similarity strictly above the configured threshold even when it decreases from the seed. Real CPU examples showed initial seeds at 0.6075–0.6822 versus completed spans at 0.8324–0.9322, so the admission threshold applies to monetary results rather than incomplete seeds. Advanced extraction to version 27 and updated PROJECT/README. Validation: 430 offline tests passed, three skipped; cached offline CPU replay recovered 12,345 PLN in all three constructed right/left examples and preserved old/new selected amounts in cases 256033, 257047, 257096, 260059 and 266418. No datasets, checkpoints or model weights were rewritten; no live API, Basal or labeled corpus-accuracy evaluation was run.
 
@@ -156,3 +156,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-17: Opened PR #67 for the raw-download/local-processing split with docs/dataset-correctness-review as its base, following #66. Confirmed the published branch was two commits ahead with no missing base commits and no existing open PR for the head. Assigned Marcin-Brzykcy and verified the open PR refs and assignment. Application behavior and prior validation are unchanged; no test rerun or merge.
 
 - 2026-11-17: Verified the current PR #67 branch in the primary checkout exposes get-raw-data and process-data in pyproject.toml. Refreshed the existing macOS/test environment with uv sync --locked, preserved obsolete root-level flat-layout metadata outside the checkout, and checked installed console metadata and absence of get-data. Documented the required installation refresh after entry-point changes. Validation: 18 CLI tests passed; whitespace and documentation links passed. No full extraction or inference run; local configuration edits remain outside this commit.
+
+- 2026-11-17: Set configs/dataset/processing/basal.yaml maximum_leak_probability to 0.4, including the previously local threshold change in PR #67. Confirmed the effective loaded value and ran focused model-settings/checkpoint checks: five passed, one optional replay skipped. Whitespace validation passed. No inference or dataset rewrite; processing checkpoints using 0.35 remain incompatible with the changed extraction configuration.
