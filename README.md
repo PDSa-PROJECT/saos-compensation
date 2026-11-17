@@ -88,7 +88,7 @@ Run the two independent commands from the repository root:
 uv run --no-sync get-raw-data --help
 uv run --no-sync process-data --help
 
-# Download complete API responses without filtering or inference
+# Search broadly and download complete candidate judgments without inference
 uv run --no-sync get-raw-data --max-age-years 10 --max-gib 10 --download-path tmp/test --debug --timeout 60
 
 # Extract features and targets from the saved JSON into a separate directory
@@ -106,8 +106,9 @@ Dataset paths accept absolute locations, such as `process-data --input-path /tmp
 | Argument | Meaning |
 |---|---|
 | `--config-dir PATH` | Directory containing `api.yaml`; defaults to `configs/dataset/acquisition` |
+| `--search-query TEXT` | Broad full-text query; default `zadośćuczynienie` |
 | `--max-age-years N` | Include judgments from the last N years, anchored to the initial run date |
-| `--max-pages N` | Maximum total judgment dump pages across resumes; `0` reads all pages |
+| `--max-pages N` | Maximum total judgment search pages across resumes; `0` reads all pages |
 | `--max-gib N` | Total raw-output limit in GiB across resumes; `0` disables it |
 | `--download-path PATH` | Raw output directory (absolute or relative); default `tmp/raw` |
 | `--timeout SECONDS` | HTTP connection/read timeout |

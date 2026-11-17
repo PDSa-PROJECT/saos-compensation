@@ -11,7 +11,7 @@ from dataset.extraction.model.configuration import load_config as load_processin
 
 
 @pytest.mark.parametrize("arguments,expected", [
-    ([], {}), (["--max-pages", "2"], {"max_pages": 2}),
+    ([], {}), (["--search-query", "zadośćuczynienie zł"], {"search_query": "zadośćuczynienie zł"}), (["--max-pages", "2"], {"max_pages": 2}),
     (["--max-gib", "10"], {"max_gib": 10.0}), (["--no-debug"], {"debug": False}),
     (["--debug"], {"debug": True}),
     (["--download-path", "/tmp/raw/"], {"download_path": "/tmp/raw/"}),

@@ -13,6 +13,7 @@ from ..configuration import ROOT, read_config, validate_path
 class AcquisitionSettings(Settings):
     """Acquisition values after explicit CLI overrides have been applied."""
 
+    search_query: NonblankString
     max_age_years: int = Field(gt=0)
     max_pages: int = Field(ge=0)
     max_gib: FiniteNumber = Field(ge=0)
@@ -47,7 +48,7 @@ def search_settings(config, today=None):
     returns:
         Start date, end date and effective query parameters.
     """
-    settings = AcquisitionSettings.from_mapping(config)
+    settings = AcquisitionSettings.from_mapping({"search_query": "zadośćuczynienie", **config})
     years = settings.max_age_years
     end = today or date.today()
     if years >= end.year:
@@ -57,6 +58,11 @@ def search_settings(config, today=None):
         day=min(end.day, monthrange(end.year - years, end.month)[1]),
     )
     params = {
+        "all": settings.search_query,
+        "courtType": "COMMON",
+        "judgmentTypes": "SENTENCE",
+        "sortingField": "DATABASE_ID",
+        "sortingDirection": "ASC",
         "pageSize": 100,
         "pageNumber": 0,
         "judgmentStartDate": start.isoformat(),
