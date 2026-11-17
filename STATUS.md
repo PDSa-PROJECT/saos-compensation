@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+PRs #66, #67 and #68 now belong to native GitHub stack #69, targeting main in that order. Independent API reads confirm positions 1/3, 2/3 and 3/3. Previously only base branches formed a chain; stack membership was missing. No source behavior or branch history changed during stack registration.
+
 Opened PR #68 from fix/extraction-amount-contexts to split-download-processing (#67), following documentation review #66. All three branches include merged main/settings #64 and preserve separate review scopes; no PR was merged. Combined validation: 547 passed, five skipped; Ruff passed. GitHub checks are pending.
 
 Integrated the filtered download/split pipeline and merged typed settings into extraction fixes. The extraction PR targets split-download-processing; the underlying chain remains main → documentation review → split pipeline → extraction fixes.
@@ -84,8 +86,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-10: Integrated target-search into the structural acquisition layer, preserving version-28 matcher behavior while adapting its growth tests to installed dataset imports and the component test layout. Retained packaging compatibility, clients/storage separation and dependency injection. Full offline validation passed: 487 tests, four skipped. Source artifacts are unchanged.
 
 - 2026-11-10: Prepared the target-pattern layer on acquisition-structure, retaining all 93 templates, added eligibility stems and their tests. Reconciled documentation against version-28 matching without including the later prefix algorithm. Full offline validation passed: 501 tests, four skipped. No acquired files were rewritten.
 
@@ -184,3 +184,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-17: Integrated the updated split-download-processing branch into extraction fixes without rewriting history. Validation: 547 passed, five optional checks skipped; Ruff passed. Preserved five-word amount contexts, exclusion-first routing, principal aggregation and prior-payment confirmation while replacing duplicate settings validation with the typed schema from main.
 
 - 2026-11-17: Published the reconciled #66 -> #67 -> #68 chain. PR #68 targets split-download-processing and is assigned to Marcin-Brzykcy; #67 documents broad search and full-source acquisition. Confirmed main ancestry through every layer, clean worktree and focused PR diffs. Combined suite: 547 passed, five optional checks skipped; Ruff passed. GitHub CI/review is monitored separately; no landing requested.
+
+- 2026-11-17: Registered native GitHub stack #69 with ordered PRs [66, 67, 68] after confirming all had stack=null despite correct chained bases. Independently verified each membership/position and the stack base main. No merge, auto-merge, rebase or source changes; runtime tests were not repeated for metadata-only organization.
