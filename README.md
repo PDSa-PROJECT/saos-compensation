@@ -99,6 +99,8 @@ For a small first download, add `--max-pages 1` (at most 100 judgments, plus cou
 
 The equivalent module entry points are `python -m dataset.cli` and `python -m dataset.cli.process`. The former `get-data` command is replaced by these two commands.
 
+Dataset paths accept absolute locations, such as `process-data --input-path /tmp/raw/ --output-path /tmp/processed/`, and relative paths, including `..`. Relative paths are resolved from the project root. Processing input and output directories must not overlap, including through symlinks.
+
 ### Download arguments
 
 | Argument | Meaning |
@@ -107,7 +109,7 @@ The equivalent module entry points are `python -m dataset.cli` and `python -m da
 | `--max-age-years N` | Include judgments from the last N years, anchored to the initial run date |
 | `--max-pages N` | Maximum total judgment dump pages across resumes; `0` reads all pages |
 | `--max-gib N` | Total raw-output limit in GiB across resumes; `0` disables it |
-| `--download-path PATH` | Raw output directory relative to the project root; default `tmp/raw` |
+| `--download-path PATH` | Raw output directory (absolute or relative); default `tmp/raw` |
 | `--timeout SECONDS` | HTTP connection/read timeout |
 | `--debug`, `--no-debug` | Enable or disable per-page console progress; raw JSON is always saved |
 
@@ -118,8 +120,8 @@ For `get-raw-data`, debug controls only per-page console progress. Full raw JSON
 | Argument | Meaning |
 |---|---|
 | `--config-dir PATH` | Directory containing processing YAML files; defaults to `configs/dataset/processing` |
-| `--input-path PATH` | Saved raw dataset; default `tmp/raw` |
-| `--output-path PATH` | Separate processed dataset; default `tmp/processed` |
+| `--input-path PATH` | Saved raw dataset (absolute or relative); default `tmp/raw` |
+| `--output-path PATH` | Separate processed dataset (absolute or relative); default `tmp/processed` |
 | `--max-gib N` | Total processed-output limit in GiB across resumes; independent of the raw limit |
 | `--timeout SECONDS` | HTTP timeout for locality metadata |
 | `--debug`, `--no-debug` | Enable or disable source/model-call diagnostics and eligible failed attempts |

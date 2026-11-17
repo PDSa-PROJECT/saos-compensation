@@ -7,7 +7,7 @@ max_pages: 0
 max_gib: 0.5
 # Print per-page download progress; raw API responses are always saved.
 debug: true
-# Output directory relative to the project root.
+# Output directory: absolute or relative to the project root.
 download_path: "tmp/raw"
 # HTTP connection/read timeout in seconds, not a total download limit.
 timeout: 20

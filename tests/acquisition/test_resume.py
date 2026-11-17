@@ -65,17 +65,21 @@ def raw_download(monkeypatch, tmp_path):
     return load_config(overrides={"download_path": "raw", "max_gib": 0, "debug": False, "timeout": 60}), calls
 
 
-def test_raw_pages_preserve_all_data_and_share_session(raw_download, tmp_path):
+@pytest.mark.parametrize("absolute", [False, True])
+def test_raw_pages_preserve_all_data_and_share_session(raw_download, tmp_path, absolute):
     """Retain unrelated cases and unknown fields without loading extraction.
 
     args:
         raw_download: Mock HTTP setup.
         tmp_path: Isolated output root.
+        absolute: Whether to use an absolute download destination.
 
     returns:
         None.
     """
     config, calls = raw_download
+    if absolute:
+        config["download_path"] = str(tmp_path / "raw")
     download.download(config)
     page = read_page(page_path(tmp_path / "raw", "judgments", 0))
     assert page["items"][0]["textContent"] == "<p>Bez kwoty.</p>"

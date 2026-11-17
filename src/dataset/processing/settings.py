@@ -1,8 +1,6 @@
 """Independent local processing paths and operational settings."""
 
-from pathlib import Path
-
-from ..configuration import validate_path
+from ..configuration import ROOT, validate_path
 
 
 def validate_settings(settings):
@@ -18,7 +16,8 @@ def validate_settings(settings):
         raise ValueError("process.yaml requires input_path, output_path, debug, max_gib and timeout")
     for name in ("input_path", "output_path"):
         validate_path(settings[name], name)
-    source, output = Path(settings["input_path"]), Path(settings["output_path"])
+    source = (ROOT / settings["input_path"]).resolve()
+    output = (ROOT / settings["output_path"]).resolve()
     if source == output or source in output.parents or output in source.parents:
         raise ValueError("Processing input and output directories must not overlap")
     if type(settings["debug"]) is not bool:

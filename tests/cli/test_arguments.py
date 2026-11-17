@@ -14,6 +14,8 @@ from dataset.extraction.model.configuration import load_config as load_processin
     ([], {}), (["--max-pages", "2"], {"max_pages": 2}),
     (["--max-gib", "10"], {"max_gib": 10.0}), (["--no-debug"], {"debug": False}),
     (["--debug"], {"debug": True}),
+    (["--download-path", "/tmp/raw/"], {"download_path": "/tmp/raw/"}),
+    (["--download-path", "../raw"], {"download_path": "../raw"}),
     (["--max-age-years", "10", "--max-gib", "10", "--download-path", "tmp/test", "--debug", "--timeout", "60"],
      {"max_age_years": 10, "max_gib": 10.0, "download_path": "tmp/test", "debug": True, "timeout": 60.0}),
 ])
@@ -54,6 +56,10 @@ def test_raw_config_does_not_require_model_files(tmp_path):
 @pytest.mark.parametrize("arguments,expected", [
     ([], {}), (["--input-path", "tmp/test"], {"input_path": "tmp/test"}),
     (["--output-path", "tmp/results", "--no-debug"], {"output_path": "tmp/results", "debug": False}),
+    (["--input-path", "/tmp/raw/", "--output-path", "/tmp/processed/"],
+     {"input_path": "/tmp/raw/", "output_path": "/tmp/processed/"}),
+    (["--input-path", "../raw", "--output-path", "../processed"],
+     {"input_path": "../raw", "output_path": "../processed"}),
 ])
 def test_processing_cli_has_independent_settings(arguments, expected):
     """Keep local processing overrides separate from acquisition date/page flags.

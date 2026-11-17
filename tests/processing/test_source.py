@@ -183,3 +183,31 @@ def test_raw_pages_cannot_be_overwritten(local_source, output_root):
     with pytest.raises(ValueError, match="different data"):
         write_page(path, {"items": [], "links": []})
     assert path.read_bytes() == before
+
+
+def test_processing_reads_and_resumes_absolute_paths(local_source, output_root):
+    """Read raw pages and save processing progress at absolute filesystem locations.
+
+    args:
+        local_source: Saved raw snapshot with one selected judgment.
+        output_root: Isolated input/output location.
+
+    returns:
+        None.
+    """
+    _, data = local_source
+    destination = output_root / "processed with spaces"
+    config = load_config(overrides={
+        "input_path": str(output_root / "tmp/raw"),
+        "output_path": str(destination),
+        "max_gib": 0,
+    })
+    state = checkpoints.load_checkpoint(config)
+    stream = source.records_from_raw(config["processing"], state, "absolute")
+    record = next(stream)
+    assert record["id"] == data["id"]
+    record["rejected"] = True
+    assert list(stream) == []
+    assert (destination / "checkpoint.json").is_file()
+    resumed = checkpoints.load_checkpoint(config)
+    assert resumed["complete"] and resumed["page"] == 1

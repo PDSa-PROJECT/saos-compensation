@@ -1,4 +1,4 @@
-"""Shared YAML and repository-relative path validation."""
+"""Shared YAML and filesystem path validation."""
 
 from pathlib import Path
 
@@ -23,7 +23,7 @@ def read_config(path):
 
 
 def validate_path(value, name):
-    """Require a nonempty path relative to the project root.
+    """Require a nonempty filesystem path string.
 
     args:
         value: Configured path string.
@@ -32,5 +32,5 @@ def validate_path(value, name):
     returns:
         None.
     """
-    if not isinstance(value, str) or not value.strip() or Path(value).is_absolute() or ".." in Path(value).parts:
-        raise ValueError(f"{name} must be relative to the project root")
+    if not isinstance(value, str) or not value.strip() or "\0" in value:
+        raise ValueError(f"{name} must be a nonempty filesystem path")
