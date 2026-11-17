@@ -140,3 +140,21 @@ def test_operative_award_cannot_be_overridden_by_reasoning_denial(monkeypatch):
     matcher = SimpleNamespace(match=lambda text: result, match_denial=lambda text: pytest.fail("Operative award already confirmed"))
     monkeypatch.setattr(target_matching, "cached_matcher", lambda *args: matcher)
     assert target_matching.match_targets("Zasądza 100 zł.\nUZASADNIENIE\nOddala powództwo w części.", load_config()) is result
+
+
+@pytest.mark.parametrize("text", [
+    "Powództwo zostało oddalone w całości.",
+    "Sąd oddalił powództwo o odszkodowanie w całości.",
+    "Powództwo podlegało oddaleniu w całości.",
+    "Oddalono wszystkie roszczenia powoda.",
+])
+def test_explicit_denial_supports_different_grammatical_constructions(text):
+    """Recognize varied complete dismissals independently of particular cases or sums.
+
+    args:
+        text: Explicit complete-dismissal construction.
+
+    returns:
+        None.
+    """
+    assert target_matching.explicit_denial(text)

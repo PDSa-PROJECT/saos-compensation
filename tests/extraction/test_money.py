@@ -118,4 +118,3 @@ def test_amount_spelling_preserves_explicit_pln(source, expected):
     match = MONEY.search(source)
     assert match is not None
     assert amount_in_pln(match) == expected
-

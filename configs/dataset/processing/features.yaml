@@ -1,5 +1,6 @@
 metadata_fields:
 - judgment_year
+- court_type # SAOS division.court.type; independent of procedural instance.
 - instance
 - prior_payment # Earlier principal paid in PLN, rounded to int; 0 without confirmation.
 - injured_party_count # Explicit recipients; defaults to 1 when unavailable.

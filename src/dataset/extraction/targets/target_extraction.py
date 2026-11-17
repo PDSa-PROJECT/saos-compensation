@@ -83,6 +83,8 @@ def recipient_group(text):
     amount = MONEY.search(text)
     prefix = text[:amount.start()] if amount else text
     match = re.search(r"na rzecz\s+(.+?)(?=\s+(?:kwot[ęy]|tytułem|nawiązkę|odszkodowanie|zadośćuczynienie|po)\b|$)", prefix, re.IGNORECASE)
+    if not match and amount is not None:
+        match = re.search(r"na rzecz\s+(.+?)(?=[,;]|\s+(?:tytułem|wraz)\b|$)", text[amount.end():], re.I)
     if not match:
         return None
     return re.sub(

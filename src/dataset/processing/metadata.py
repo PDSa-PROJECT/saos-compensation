@@ -26,6 +26,8 @@ def add_metadata_features(result, record, fields, localities=None):
         else result["instance"]["value"],
         "court_seat": locality[1].strip() if locality else "not_available",
     }
+    if "court_type" in fields:
+        values["court_type"] = court["type"]
     if "injured_party_count" in fields:
         count = result["award"].get("injured_party_count")
         values["injured_party_count"] = (
@@ -48,6 +50,8 @@ def add_metadata_features(result, record, fields, localities=None):
         "instance": result["instance"],
         "court_seat": {"field": "division.court", "value": court},
     }
+    if "court_type" in fields:
+        sources["court_type"] = {"field": "division.court.type", "value": court["type"]}
     if "court_locality_size" in fields:
         sources["court_locality_size"] = {
             "locality": matched,

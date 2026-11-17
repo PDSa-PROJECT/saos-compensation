@@ -1,5 +1,7 @@
 """Monetary contexts, award verification and earlier-payment extraction."""
 
+import re
+
 from ..model import decisions
 from ..source import text as api
 from ..source.passages import fragments
@@ -127,6 +129,11 @@ async def extract_prior_payment(server, match, config):
         if len(amounts) != 1:
             return 0
         amount = amounts[0]
+        start = amount.start()
+    prefix = " ".join(source[:start].split()[-5:])
+    if re.search(r"\b(?:ponadto|dodatkowo|kolejn)\w*", prefix, re.I) and not re.search(r"łącznie|w sumie|suma", source, re.I):
+        print("Prior-payment component has no explicit combined total; retaining the unconfirmed fallback.", flush=True)
+        return 0
     value = api.amount_in_pln(amount)
     answer = (await decisions.ask(
         server,

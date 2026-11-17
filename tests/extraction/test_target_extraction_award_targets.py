@@ -134,6 +134,7 @@ def test_missing_prior_payment_requires_no_model_call(monkeypatch):
             "10000",
             1,
         ),
+        ("Zobowiązuje oskarżonego do uiszczenia 10000 zł na rzecz M. M. (1).", "10000", 1),
         ("Zasądza 1,5 tys. zł.", "1500", "not_available"),
         ("Zasądza 700,50 zł.", "700.50", "not_available"),
         ("Zasądza powodom po 100 zł.", None, "not_available"),
@@ -218,3 +219,22 @@ def test_selected_target_must_match_source_offsets(monkeypatch):
                 None, "Different source.", config_module.load_config()
             )
         )
+
+
+@pytest.mark.parametrize("anchored", [False, True])
+def test_additional_prior_payment_cannot_silently_replace_the_total(monkeypatch, anchored):
+    """Withhold a known component when the combined earlier principal is unresolved.
+
+    args:
+        monkeypatch: Guard against treating a component as a confirmed total.
+        anchored: Whether the match carries exact amount offsets.
+
+    returns:
+        None.
+    """
+    monkeypatch.setattr(decisions, "ask", lambda *args: pytest.fail("An explicit component is not a combined total"))
+    match = {"text": "Sprawca zapłacił ponadto A. S. kwotę 20.000 zł w ramach obowiązku naprawienia szkody."}
+    if anchored:
+        start = match["text"].index("20.000 zł")
+        match.update(start=0, amount_start=start, amount_end=start + len("20.000 zł"))
+    assert asyncio.run(amounts.extract_prior_payment(None, match, config_module.load_config())) == 0

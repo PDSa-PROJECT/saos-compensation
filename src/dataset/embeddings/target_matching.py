@@ -45,7 +45,7 @@ def validate_settings(settings, patterns):
     ):
         raise ValueError("minimum_cosine_similarity must be between 0 and 1")
     keywords = settings["candidate_keywords"]
-    # Denial screening uses every sentence, so it has no keyword group.
+    # Denial has an explicit-dismissal guard instead of monetary keyword groups.
     keyword_groups = {*TARGET_CLASSES, *EXCLUDED_CLASSES, "shared"}
     if not isinstance(keywords, dict) or set(keywords) != keyword_groups:
         raise ValueError(
@@ -111,11 +111,11 @@ def candidate_sentences(text, keywords):
                     window = source[start:end]
                     local_classes = classes
                     costs = bool(re.search(r"koszt\w*\s+(?:proces|postępow|zastępstw|sądow)|zastępstw\w*\s+proces|opłat\w*\s+sądow|wynagrodzeni\w*\s+pełnomocn|Skarbu Państwa|wynagrodzenie.*biegł", source[amount.start():amounts[index+1].start()] if amount is not amounts[-1] else source[amount.start():], re.I))
-                    costs = costs or bool(re.search(r"nakazuje\s+(?:ściągnąć|pobrać)|(?:poniesion|wyłożon)\w*.*Skarb|przez Skarb Państwa|na rzecz Skarbu Państwa|tytułem opłat", source, re.I))
+                    costs = costs or bool(re.search(r"nakaz(?:uje|ał)\s+(?:ściągnąć|pobrać)|(?:koszt|wydatk)\w*.*tymczasow\w*.*Skarb|tytułem opłat", source, re.I))
                     costs = costs or bool(re.search(r"(?:potrąc|rozlicz)\w*.*koszt|wzajemn\w*.*(?:potrąc|rozlicz)", source, re.I))
-                    costs = costs or bool(re.search(r"pełnomocnik|biegł|koszt\w*\s+(?:proces|postępow|sądow)|zastępstw\w*\s+proces|opłat\w*\s+sądow", source[max(0, amount.start()-100):amount.start()], re.I))
+                    costs = costs or bool(re.search(r"wynagrodzeni\w*.*(?:biegł|pełnomocn)|(?:biegł|pełnomocn).*wynagrodzeni|koszt\w*\s+(?:proces|postępow|sądow)|zastępstw\w*\s+proces|opłat\w*\s+sądow", source[max(0, amount.start()-100):amount.start()], re.I))
                     if operative and amount is amounts[0] and not costs:
-                        local_classes = tuple(label for label in local_classes if label != "prior_payment" and (label != "other_payments" or not re.search(r"\bz\s+(?:ustawowymi\s+)?odsetkami", source, re.I)))
+                        local_classes = tuple(label for label in local_classes if label != "prior_payment" and (label != "other_payments" or not re.search(r"\bz\s+(?:\w+\s+){0,3}odsetkami", source, re.I)))
                     if not judicial or costs or (operative and amount is not amounts[0]):
                         local_classes = tuple(label for label in local_classes if label != "judgment")
                     if costs and "procedural_costs" not in local_classes:
@@ -143,11 +143,11 @@ def explicit_denial(text):
     returns:
         True only for an explicit unqualified dismissal or complete refusal of payment.
     """
-    if re.search(r"apelac|kasac|w pozostał|w części|częściow|co do kwoty|ponad kwot|wn(?:osi|iósł)|domaga|żąda|zażąda|nie\s+oddal|nie\s+odmaw|zasądza|zasądził", text, re.I):
+    if re.search(r"apelac|kasac|w pozostał|w części|częściow|co do kwoty|ponad kwot|wnos|wnios|wniós|domaga|żąda|zażąda|nie\s+oddal|nie\s+odmaw|zasądza|zasądził", text, re.I):
         return False
     return bool(re.search(
-        r"\boddal(?:a|ił|iła|ono|eniu|enie)\b.*?\b(?:powództw|żądani|roszczeni)\w*"
-        r"|\b(?:powództw|żądani|roszczeni)\w*.*?\boddal(?:a|ił|iła|ono|eniu|enie)\b"
+        r"\boddal(?:a|ił[ayo]?|ono|on[ae]|eniu|enie)\b.*?\b(?:powództw|żądani|roszczeni)\w*"
+        r"|\b(?:powództw|żądani|roszczeni)\w*.*?\boddal(?:a|ił[ayo]?|ono|on[ae]|eniu|enie)\b"
         r"|\bodmawia\b.*?\b(?:jakiejkolwiek|jakimkolwiek|całości)\b", text, re.I,
     ))
 
@@ -209,7 +209,7 @@ class TargetMatcher:
         )
 
     def match_denial(self, text):
-        """Check full sentences for denial before any monetary candidate selection.
+        """Rank explicit complete-denial sentences in the supplied source scope.
 
         args:
             text: Full normalized judgment, including sentences without PLN or keywords.
@@ -263,27 +263,31 @@ class TargetMatcher:
         if not sentences:
             return result
         vectors = self.encode([prepare_text(row["text"]) for row in sentences])
-        scores = cosine_similarity(
-            vectors, self.pattern_vectors, device=self.settings["device"]
-        ).cpu()
-        judgments = []
-        assigned = {}
-        for row, similarities in zip(sentences, scores, strict=True):
-            best = {}
-            for index, (label, phrase) in enumerate(self.patterns):
-                if label not in row["classes"]:
-                    continue
-                score = float(similarities[index])
-                if label not in best or score > best[label][0]:
-                    best[label] = (score, phrase)
-            exclusions = [label for label in (*EXCLUDED_CLASSES, "request") if label in best and best[label][0] > self.settings["minimum_cosine_similarity"]]
-            eligible = exclusions or [label for label in ("judgment",) if label in best]
-            if not eligible:
-                continue
-            label = max(eligible, key=lambda key: (best[key][0], key in EXCLUDED_CLASSES))
-            score, phrase = best[label]
-            if score <= self.settings["minimum_cosine_similarity"]:
-                continue
+        non_target = [i for i, (label, _) in enumerate(self.patterns) if label in (*EXCLUDED_CLASSES, "request")]
+        target = [i for i, (label, _) in enumerate(self.patterns) if label == "judgment"]
+        scores = cosine_similarity(vectors, self.pattern_vectors[non_target], device=self.settings["device"]).cpu()
+        assignments = {}
+        for index, (row, similarities) in enumerate(zip(sentences, scores, strict=True)):
+            choices = [
+                (float(score), self.patterns[pattern][0] in EXCLUDED_CLASSES, self.patterns[pattern])
+                for score, pattern in zip(similarities, non_target, strict=True)
+                if self.patterns[pattern][0] in row["classes"]
+            ]
+            if choices:
+                score, _, (label, phrase) = max(choices, key=lambda item: item[:2])
+                if score > self.settings["minimum_cosine_similarity"]:
+                    assignments[index] = (label, score, phrase)
+        remaining = [index for index, row in enumerate(sentences) if index not in assignments and "judgment" in row["classes"]]
+        if remaining:
+            target_scores = cosine_similarity(vectors[remaining], self.pattern_vectors[target], device=self.settings["device"]).cpu()
+            for index, similarities in zip(remaining, target_scores, strict=True):
+                best = int(similarities.argmax())
+                score = float(similarities[best])
+                if score > self.settings["minimum_cosine_similarity"]:
+                    assignments[index] = ("judgment", score, self.patterns[target[best]][1])
+        judgments, assigned = [], {}
+        for index, (label, score, phrase) in sorted(assignments.items()):
+            row = sentences[index]
             selected = {**row, "similarity": score, "pattern": phrase}
             assigned[row["amount_start"]] = label
             if label == "judgment":
@@ -291,7 +295,7 @@ class TargetMatcher:
             previous = result[label]
             if previous is None or (label == "judgment" and (row["operative"], score) > (previous["operative"], previous["similarity"])) or (label != "judgment" and score > previous["similarity"]):
                 result[label] = selected
-        principal = [row for row in sentences if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"] and assigned.get(row["amount_start"]) not in (*EXCLUDED_CLASSES, "request")]
+        principal = [row for row in sentences if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"] and assigned.get(row["amount_start"]) != "other_payments"]
         operative = [row for row in judgments if row["operative"] and row["first_amount"]]
         if principal and any(assigned.get(row["amount_start"]) != "judgment" for row in principal):
             result["judgment"] = None
@@ -318,7 +322,7 @@ def cached_matcher(settings_json, patterns_json):
 
 def match_targets(text, config):
     """
-    Locate denial evidence before monetary target and exclusion contexts.
+    Select current principal evidence and consider denial only without an operative award.
 
     args:
         text: Full normalized judgment.
@@ -331,8 +335,8 @@ def match_targets(text, config):
         return dict.fromkeys(PATTERN_CLASSES)
     reasons = REASONS.search(text)
     ruling = text[:reasons.start()] if reasons else text
+    principal = [row for row in candidate_sentences(ruling, config["embedding"]["candidate_keywords"]) if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"]]
     if re.search(r"oddal\w*\s+apelac|apelac\w*.*oddal|utrzym\w*.*w mocy", ruling, re.I):
-        principal = [row for row in candidate_sentences(ruling, config["embedding"]["candidate_keywords"]) if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"]]
         if not principal:
             return {**dict.fromkeys(PATTERN_CLASSES), "excluded_reason": "appeal contains no new principal award"}
     matcher = cached_matcher(
@@ -341,7 +345,7 @@ def match_targets(text, config):
     )
     result = matcher.match(text)
     selected = result["judgment"]
-    if selected is not None and selected.get("operative"):
+    if principal or (selected is not None and selected.get("operative")):
         return result
     reasons = REASONS.search(text)
     denial = matcher.match_denial(text[:reasons.start()] if reasons and reasons.start() else text)

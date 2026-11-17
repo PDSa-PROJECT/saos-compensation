@@ -211,8 +211,8 @@ async def extract_features(server, text, config, identifier):
                     **{
                         f"fit_{name}": {
                             "type": "noul",
-                            "instructions": "Czy oceniany fragment odpowiada na pytanie: "
-                            + fields[name],
+                            "instructions": ("Oceń zgodność tylko dla wskazanych osób objętych świadczeniem. Zachowaj numery w nawiasach przy inicjałach. " if subjects else "")
+                            + "Czy oceniany fragment odpowiada na pytanie: " + fields[name],
                         }
                         for name in sorted(span_fields[start, end])
                     },

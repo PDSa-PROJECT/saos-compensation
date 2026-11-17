@@ -4,7 +4,7 @@ embedding:
   device: mps # cpu, mps or cuda.
   batch_size: 64
   max_length: 128 # Longer sentences use all token windows, without dropping the tail.
-  minimum_cosine_similarity: 0.85 # Winning score must be strictly greater. If more than one is, highest score wins
+  minimum_cosine_similarity: 0.85 # Strict threshold; any eligible non-target winner takes priority over judgment.
 
   # Each amount uses five words before and after its exact PLN span.
   # Non-target matches above the threshold take priority over judgment.

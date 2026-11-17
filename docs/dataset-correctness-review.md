@@ -8,9 +8,9 @@ Przegląd obejmuje zapisane `record.json`, `award.json`, `source.txt` i `model_c
 
 W próbie znajduje się 16 rekordów z `valid=true` oraz jeden rekord debugowy z `valid=false`. Dziewięć zaakceptowanych rekordów ma błędny target. Trzy kolejne wymagają poprawienia cech lub wcześniejszej wypłaty. Rekord debugowy nie zawiera kwoty dostępnej w sentencji. W pozostałych czterech przypadkach nie stwierdzono podstawowego błędu targetu ani obowiązkowego opisu szkody w sprawdzonym zakresie.
 
-Oczekiwany target oznacza sumę jednorazowych świadczeń głównych objętych modelowaną sprawą. Nie obejmuje odsetek, kosztów procesu ani wcześniejszych wypłat. Dla opisanych apelacji podano świadczenie utrzymane w mocy. Jeżeli dataset ma obejmować wyłącznie nowe zasądzenia w bieżącym wyroku, prostszą alternatywą jest odrzucenie takich apelacji.
+Oczekiwany target oznacza sumę jednorazowych świadczeń głównych objętych modelowaną sprawą. Nie obejmuje odsetek, kosztów procesu ani wcześniejszych wypłat. Kwoty utrzymane w mocy podane w historycznych opisach apelacji służą wyjaśnieniu starych błędów. Dla wdrożenia wybrano target z bieżącego rozstrzygnięcia: apelacje jedynie utrzymujące wcześniejsze świadczenia i zasądzające koszty są odrzucane.
 
-Poniższe rozwiązania są propozycjami. Nie zostały w ramach tego dokumentu wdrożone ani sprawdzone eksperymentalnie. Nie wymagają nowego modelu, rozbudowanej analizy prawnej ani przebudowy pipeline'u. Mają ograniczyć widoczne błędy, również kosztem pozostawienia niektórych kwot jako nieustalonych.
+Poniższe opisy i adnotacje były podstawą zmian. Wyniki wdrożenia i jego ograniczenia podano w końcowej sekcji dokumentu. Nie wymagają nowego modelu, rozbudowanej analizy prawnej ani przebudowy pipeline'u. Mają ograniczyć widoczne błędy, również kosztem pozostawienia niektórych kwot jako nieustalonych.
 
 ## Zasady proponowanych zmian
 
@@ -169,3 +169,94 @@ Zalecana kolejność małych zmian:
 Po każdej zmianie sprawdzić zarówno wskazane błędne przypadki, jak i cztery przypadki z poprawnym podstawowym wynikiem. Poprawa jednego przykładu nie wystarcza, jeżeli filtr psuje wcześniej prawidłowe odczyty. Najpierw należy upewnić się, że błędne rekordy nie przechodzą jako poprawne; odzyskanie wszystkich trudniejszych przypadków może pozostać osobnym etapem.
 
 Podczas przeglądu zapisane fragmenty i offsety odpowiadały źródłom. Widoczne problemy dotyczą przede wszystkim znaczenia i roli fragmentu, a nie uszkodzenia plików JSON. Nie wykonywano ponownej ekstrakcji, napraw danych ani niezależnej weryfikacji wszystkich metadanych lokalizacyjnych.
+
+## Wdrożenie i replay po poprawkach — 17 listopada 2026 r.
+
+Zmiany są na branchu `fix/extraction-amount-contexts`, utworzonym z `split-download-processing`. Reguły wykonawcze nie zawierają ID spraw, konkretnych kwot ani nazw osób z powyższych przykładów. Próbka służy do sprawdzania regresji, a nie do wybierania wyjątków w kodzie.
+
+Wdrożono:
+
+- niezależne, mogące się zazębiać wycinki obejmujące kwotę i pięć słów z każdej strony; zachowane są też pełne klauzule i dokładne offsety;
+- cosine **ściśle ponad 0.85** oraz ocenę klas innych niż target przed obliczeniem similarity do `judgment` dla pozostałych wycinków;
+- wykluczanie jawnych kosztów i podstaw odsetkowych, zachowanie świadczenia głównego z odsetkami oraz preferencję bieżącej sentencji;
+- sumowanie odrębnych, potwierdzonych kwot głównych z sentencji, bez duplikatów, i odrzucanie niepełnych lub sprzecznie sklasyfikowanych sum;
+- jawne pełne oddalenie jako warunek denial, blokadę oddalenia częściowego, apelacji i żądań stron oraz wybór najlepszego wyniku w całym dopuszczonym zakresie tekstu;
+- odrzucanie apelacji jedynie utrzymujących wcześniejsze świadczenia i zasądzających koszty, również w debug; apelacje z nowym zasądzeniem pozostają dopuszczalne;
+- liczenie beneficjentów z pełnych klauzul, z zachowaniem numerów przy inicjałach, i przekazanie ich tożsamości do pytań o cechy;
+- odrzucanie samych markerów dowodowych oraz dokładniejsze pytania o własną szkodę aktualnych beneficjentów; przy nieustalonym targecie debug nadal wykonuje podstawową ekstrakcję cech;
+- potwierdzanie przez Basala roli konkretnej kwoty wcześniejszej wypłaty zamiast swobodnego wydobywania liczby i waluty; PLN jest wymagany w źródle, a zapisywana cecha pozostaje liczbą;
+- odrzucanie jawnej dopłaty lub składnika jako niepotwierdzonej sumy wcześniejszych wypłat, bez obniżania progu Basala;
+- obsługę zapisu `4. 000 zł` oraz waluty w słownym rozwinięciu, np. `40.000 (czterdzieści tysięcy złotych)`;
+- `court_type` bezpośrednio z `division.court.type`, wybór w konfiguracji i kodowanie kategorialne; `instance` pozostaje niezależną cechą.
+
+Liczby i inicjały są neutralizowane wyłącznie na potrzeby embeddingu. Źródłowy wycinek, jego kwota i wskazanie beneficjentów nie są w ten sposób zmieniane. Numer wersji ekstraktora pozostał bez zmian. Zmienione pytania, wzorce, progi i wybór cech wymagają nowego katalogu przetwarzania; starych danych nie nadpisano.
+
+### Wyniki targetów
+
+Replay wykonał rzeczywisty, zapisany MiniLM na CPU na wszystkich 17 tekstach. Poniższa tabela dotyczy wyboru i parsowania targetu oraz jawnych beneficjentów, **nie nowej pełnej ekstrakcji cech ani ponownego zatwierdzenia `valid`**.
+
+| Case | Target po replayu | Uwaga |
+|---|---:|---|
+| 256976 | 30000 zł |  |
+| 256991 | 7850 zł | Jawni beneficjenci: 3. |
+| 257024 | 20500 zł |  |
+| 257916 | 0 zł | Zachowany poprawny target kontrolny. |
+| 258067 | 0 zł | Zachowany poprawny target kontrolny. |
+| 258134 | 10000 zł | Zachowany poprawny target kontrolny. |
+| 260046 | odrzucony | Apelacja bez nowego zasądzenia głównego. |
+| 260063 | 14000 zł |  |
+| 260384 | odrzucony | Apelacja bez nowego zasądzenia głównego. |
+| 274172 | 4000 zł | Zachowany poprawny target kontrolny. |
+| 275542 | odrzucony | Apelacja bez nowego zasądzenia głównego. |
+| 275708 | odrzucony | Apelacja bez nowego zasądzenia głównego. |
+| 289025 | 40000 zł |  |
+| 304803 | nieustalony | Brak zaakceptowanego targetu; stare 8000 zł nie jest przyjmowane. |
+| 333609 | 445000 zł | Jawni beneficjenci: 5. |
+| 337201 | 150000 zł |  |
+| 369009 | 170000.00 zł |  |
+
+Wynik: **12 targetów zgodnych z opisanymi wartościami bieżących rozstrzygnięć, 4 odrzucone apelacje, 1 target nieustalony**. Wszystkie cztery przypadki kontrolne zachowały poprawne kwoty. Nie jest to estymata trafności na niezależnym zbiorze.
+
+### Wcześniejsze wypłaty i ograniczenia
+
+Finalne pytanie sprawdzono na rzeczywistym, lokalnym `Remek/basal-2.0-4.5B` na CPU. Bez zmiany `amount_minimum_probability=0.6` potwierdzono:
+
+| Case | Kwota | Ocena roli |
+|---|---:|---:|
+| 256976 | 5000 zł | 0.848 |
+| 257024 | 4500 zł | 0.851 |
+| 337201 | 110000 zł | 0.806 |
+
+Dodatkowe kontrole ról w trakcie prac potwierdziły wypłatę 9000 zł (0.931) i odrzuciły bieżące zasądzenie 150000 zł (0.137) oraz koszty procesu 2417 zł (0.113) jako wcześniejsze wypłaty. Te kontrole nie oznaczają ponownego przyjęcia odrzuconej apelacji 275708.
+
+Nie rozwiązano ogólnego sumowania wielu historycznych wypłat dla kilku osób ani pewnej deduplikacji takich wzmianek. W szczególności odzyskanie 195000 zł dla 333609 oraz pełnych 60000 zł dla 369009 wymaga dalszej weryfikacji. Sam składnik 20000 zł opisany jako wypłacony „ponadto” nie jest zapisywany jako potwierdzona suma. Zero nadal oznacza także brak potwierdzenia ekstrakcji. Nie wykonano pełnej ponownej ekstrakcji wszystkich cech na 17 sprawach; nowe pytania nie są dowodem poprawnego przypisania każdej szkody do osoby.
+
+### Dokładne stare błędne dopasowania
+
+#### 304803
+
+Stary wybrany fragment (`judgment`, cosine 0.757369, offsety `18613:18837`):
+
+> Nie jest uprawnione twierdzenie pozwanego, że zasądzona od pozwanego w postępowaniu karnym na rzecz poszkodowanego G. R. (1) nawiązka w kwocie 8.000zł (egzekwowana przez komornika) wyczerpuje należne pozwanemu odszkodowanie.
+
+Fragment opisuje nawiązkę z wcześniejszej sprawy karnej, a nie bieżące zasądzenie. Powodem w bieżącej sprawie jest ubezpieczyciel (...) S.A., pozwanym Ł. M., a źródło opisuje regres za świadczenia wypłacone G. R. (1). Sentencja zasądza 94146,99 zł. Obrażenia G. R. (1) nie opisują własnej szkody aktualnego beneficjenta. Po poprawkach bieżący kandydat nie przechodzi progu; wynik pozostaje nieustalony. Nie zastępujemy go kwotą z historii postępowania ani zerem. Dalsza ocena tego rodzaju spraw musi również sprawdzić zgodność opisu szkody z beneficjentem.
+
+#### 333609
+
+Stary wybrany fragment (`judgment-denial`, cosine 0.864717, offsety `34998:35130`):
+
+> W związku z powyższym, Sąd zasądził na rzecz powoda pozostałą do zapłaty kwotę 110 000 zł tytułem zadośćuczynienia (punkt 1 wyroku).
+
+Zdanie wprost opisuje zasądzenie, bez pełnego oddalenia lub odmowy. Jest odrzucane jako denial niezależnie od cosine. Bieżący target wynika z pięciu odrębnych świadczeń: 170000 + 170000 + 45000 + 30000 + 30000 = 445000 zł.
+
+#### 337201
+
+Stary wybrany fragment (`judgment-denial`, cosine 0.886387, offsety `31371:31474`):
+
+> Zdaniem Sądu nie było podstaw do ustalenia wysokości zadośćuczynienia w kwocie zażądanej przez powódkę.
+
+Zdanie wyjaśnia nieuwzględnienie całej żądanej wysokości, bez stwierdzenia całkowitego oddalenia powództwa. Nie spełnia warunku jawnego denial. Bieżąca sentencja daje 150000 zł.
+
+### Sprawdzenia ogólne
+
+Pełny zestaw automatyczny: **535 passed, 5 skipped**; Ruff i sprawdzenie białych znaków przeszły. Oprócz przykładów z dokumentu testy obejmują odmienne formy gramatyczne oddalenia, różne kwoty i waluty, akcesoryjne odsetki, koszty procesu i sądowe, leczenie z opinią biegłego oraz odszkodowanie na rzecz Skarbu Państwa. Sama wzmianka o pełnomocniku, biegłym lub publicznej stronie nie stanowi wystarczającej reguły kosztowej. Testy sprawdzają także niepełne sumy, różne osoby, nakładające się wycinki, apelacje ze zmianą świadczenia i niezależne źródło typu sądu.
