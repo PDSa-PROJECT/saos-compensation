@@ -36,6 +36,7 @@ def validate_settings(settings, patterns):
         "device",
         "batch_size",
         "max_length",
+        "window_overlap",
         "minimum_cosine_similarity",
         "denial_minimum_cosine_similarity",
         "candidate_keywords",
@@ -43,6 +44,9 @@ def validate_settings(settings, patterns):
     if not isinstance(settings, dict) or set(settings) != required:
         raise ValueError(f"targets.yaml embedding requires {sorted(required)}")
     validate_encoder_settings(settings)
+    overlap = settings["window_overlap"]
+    if type(overlap) is not int or not 0 <= overlap < settings["max_length"]:
+        raise ValueError("window_overlap must be nonnegative and smaller than max_length")
     for name in ("minimum_cosine_similarity", "denial_minimum_cosine_similarity"):
         threshold = settings[name]
         if (
@@ -188,7 +192,7 @@ class TargetMatcher:
         )
 
     def match_denial(self, text):
-        """Rank whole sentences or separate beginning/ending views for long denials.
+        """Rank overlapping sentence windows for denial across the full judgment.
 
         args:
             text: Full normalized judgment, including sentences without PLN or keywords.
@@ -219,7 +223,7 @@ class TargetMatcher:
             for sentence in sentence_fragments(
                 {"text": line[0], "start": line.start(), "end": line.end()}
             )
-            for view in encoder.sentence_views(sentence["text"])
+            for view in encoder.sentence_views(sentence["text"], self.settings["window_overlap"])
         )
         result = None
         for batch in batched(sentences, self.settings["batch_size"]):

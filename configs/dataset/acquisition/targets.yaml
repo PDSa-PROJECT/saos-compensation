@@ -3,7 +3,8 @@ embedding:
   revision: e8f8c211226b894fcb81acc59f3b34ba3efd5f42
   device: mps # cpu, mps or cuda.
   batch_size: 64
-  max_length: 512 # Long denial sentences use separate beginning and ending views.
+  max_length: 512 # Includes sentence boundary tokens. - model specific, currently max window
+  window_overlap: 256 # Source tokens shared by consecutive denial windows. - tuned for specific model; half of the max window
   minimum_cosine_similarity: 0.7 # Winning score must be strictly greater. If more than one is, highest score wins
   denial_minimum_cosine_similarity: 0.85 # Full denial uses its own stricter threshold.
 

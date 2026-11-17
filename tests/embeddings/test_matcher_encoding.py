@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+import pytest
 import torch
 
 from dataset.embeddings.encoding import SentenceEncoder
@@ -73,35 +74,54 @@ def test_sentences_are_encoded_once_with_tail_truncation_and_masked_pooling():
     assert shapes == [(2, 512), (1, 2)]
 
 
-def test_sentence_views_keep_whole_input_or_separate_beginning_and_ending():
-    """Reserve special tokens and retain exact source spans for both long-sentence views.
+@pytest.mark.parametrize(
+    "length,spans",
+    [
+        (10, [(0, 10)]),
+        (510, [(0, 510)]),
+        (511, [(0, 510), (254, 511)]),
+        (764, [(0, 510), (254, 764)]),
+        (1026, [(0, 510), (254, 764), (508, 1018), (762, 1026)]),
+    ],
+)
+def test_sentence_views_cover_all_tokens_with_configured_overlap(length, spans):
+    """Preserve complete coverage, overlap and exact source offsets at window boundaries.
 
     args:
-        None.
+        length: Number of source tokens represented by individual characters.
+        spans: Expected source windows excluding special tokens.
 
     returns:
         None.
     """
     class Tokenizer:
-        """Represent each character as one token with exact source offsets."""
+        """Model tokenizer overflow and sentence boundary tokens without loading weights."""
 
         def __call__(self, text, **kwargs):
-            """Expose every source character without truncating tokenization.
+            """Return token offsets in overlapping windows including special tokens.
 
             args:
                 text: Original sentence.
-                kwargs: Tokenizer options supplied by the encoder.
+                kwargs: Tokenizer window settings supplied by the encoder.
 
             returns:
-                Character-aligned token offsets.
+                Per-window source offsets with zero-width special tokens.
             """
             assert kwargs == {
-                "add_special_tokens": False,
-                "truncation": False,
+                "truncation": True,
+                "max_length": 512,
+                "stride": 256,
+                "return_overflowing_tokens": True,
                 "return_offsets_mapping": True,
                 "verbose": False,
             }
-            return {"offset_mapping": [(index, index + 1) for index in range(len(text))]}
+            windows = []
+            for start in range(0, len(text), 254):
+                end = min(start + 510, len(text))
+                windows.append([(0, 0)] + [(i, i + 1) for i in range(start, end)] + [(0, 0)])
+                if end == len(text):
+                    break
+            return {"offset_mapping": windows}
 
         def num_special_tokens_to_add(self):
             """Reserve the two sentence boundary tokens.
@@ -117,12 +137,26 @@ def test_sentence_views_keep_whole_input_or_separate_beginning_and_ending():
     encoder = SentenceEncoder.__new__(SentenceEncoder)
     encoder.settings = {"max_length": 512}
     encoder.tokenizer = Tokenizer()
-    short = "a" * 510
-    assert encoder.sentence_views(short) == [{"text": short, "start": 0, "end": 510}]
-    text = "a" * 510 + "middle" + "b" * 510
-    views = encoder.sentence_views(text)
-    assert views == [
-        {"text": "a" * 510, "start": 0, "end": 510},
-        {"text": "b" * 510, "start": 516, "end": 1026},
-    ]
+    text = "a" * length
+    views = encoder.sentence_views(text, 256)
+    assert [(row["start"], row["end"]) for row in views] == spans
     assert all(text[row["start"]:row["end"]] == row["text"] for row in views)
+    assert set(range(length)) == {i for row in views for i in range(row["start"], row["end"])}
+    assert all(left["end"] - right["start"] == 256 for left, right in zip(views, views[1:]))
+
+
+@pytest.mark.parametrize("overlap", [-1, 510, 512, True, 0.5, "256", None])
+def test_window_overlap_must_fit_source_token_capacity(overlap):
+    """Reject overlap values that cannot produce a valid advancing token window.
+
+    args:
+        overlap: Invalid overlap value.
+
+    returns:
+        None.
+    """
+    encoder = SentenceEncoder.__new__(SentenceEncoder)
+    encoder.settings = {"max_length": 512}
+    encoder.tokenizer = SimpleNamespace(num_special_tokens_to_add=lambda: 2)
+    with pytest.raises(ValueError, match="window_overlap"):
+        encoder.sentence_views("Source sentence.", overlap)

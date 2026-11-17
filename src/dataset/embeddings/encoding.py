@@ -68,24 +68,32 @@ class SentenceEncoder:
         if settings["max_length"] > self.model.config.max_position_embeddings:
             raise ValueError("Embedding max_length exceeds the model context")
 
-    def sentence_views(self, text):
-        """Keep a fitting sentence whole or return its beginning and ending separately.
+    def sentence_views(self, text, overlap):
+        """Split a sentence into overlapping token windows with exact source offsets.
 
         args:
             text: Original source sentence.
+            overlap: Number of source tokens shared by consecutive windows.
 
         returns:
-            One or two text spans with offsets relative to the original sentence.
+            Source-aligned windows covering the sentence from beginning to end.
         """
+        limit = self.settings["max_length"] - self.tokenizer.num_special_tokens_to_add()
+        if type(overlap) is not int or not 0 <= overlap < limit:
+            raise ValueError("window_overlap must be nonnegative and smaller than the token capacity")
+        if not text.strip():
+            return []
         tokens = self.tokenizer(
-            text, add_special_tokens=False, truncation=False,
+            text, truncation=True, max_length=self.settings["max_length"],
+            stride=overlap, return_overflowing_tokens=True,
             return_offsets_mapping=True, verbose=False,
         )
-        limit = self.settings["max_length"] - self.tokenizer.num_special_tokens_to_add()
-        offsets = tokens["offset_mapping"]
-        spans = [(0, len(text))] if len(offsets) <= limit else [
-            (0, offsets[limit - 1][1]), (offsets[-limit][0], len(text))
-        ]
+        spans = []
+        for offsets in tokens["offset_mapping"]:
+            source = [(start, end) for start, end in offsets if end > start]
+            spans.append((source[0][0], source[-1][1]))
+        spans[0] = (0, spans[0][1])
+        spans[-1] = (spans[-1][0], len(text))
         return [{"text": text[start:end], "start": start, "end": end} for start, end in spans]
 
     def encode(self, texts):

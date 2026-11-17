@@ -21,6 +21,7 @@ SETTINGS = {
     "device": "cpu",
     "batch_size": 8,
     "max_length": 128,
+    "window_overlap": 64,
     "minimum_cosine_similarity": 0.7,
     "denial_minimum_cosine_similarity": 0.85,
     "candidate_keywords": {
@@ -467,11 +468,12 @@ def test_mutual_cost_settlement_is_excluded_without_denial(monkeypatch, with_awa
             for text in texts
         ])
 
-    def sentence_views(source):
+    def sentence_views(source, overlap):
         """Keep short source sentences whole for controlled role comparisons.
 
         args:
             source: Original source sentence.
+            overlap: Configured token overlap.
 
         returns:
             One span with exact source offsets.
@@ -490,3 +492,17 @@ def test_mutual_cost_settlement_is_excluded_without_denial(monkeypatch, with_awa
     assert not result.get("denied")
     assert result["confirmed"] is with_award
     assert result["suma"] == ("1000" if with_award else "brak informacji")
+
+
+@pytest.mark.parametrize("overlap", [-1, 128, True, 0.5, "64", None])
+def test_invalid_window_overlap_fails_before_model_loading(overlap):
+    """Validate configured window overlap independently of model inference.
+
+    args:
+        overlap: Invalid overlap relative to the fixture's 128-token context.
+
+    returns:
+        None.
+    """
+    with pytest.raises(ValueError, match="window_overlap"):
+        validate_settings({**SETTINGS, "window_overlap": overlap}, PATTERNS)

@@ -26,11 +26,12 @@ class Encoder:
         self.costs = {target_matching.prepare_text(text): score for text, score in (costs or {}).items()}
         self.calls = []
 
-    def sentence_views(self, text):
+    def sentence_views(self, text, overlap):
         """Keep controlled short sentences as a single source span.
 
         args:
             text: Original test sentence.
+            overlap: Configured token overlap.
 
         returns:
             One source span covering the sentence.
@@ -275,25 +276,43 @@ def test_equal_denial_scores_keep_first_source_sentence():
     assert matcher.match_denial("\n".join(sentences))["text"] == sentences[0]
 
 
-def test_long_sentence_ending_competes_independently_with_its_beginning(monkeypatch):
-    """Select denial evidence from the ending without averaging both view scores.
+@pytest.mark.parametrize("winner", [1, 2])
+def test_long_sentence_windows_compete_independently(monkeypatch, winner):
+    """Find a denial in a middle or final window without averaging window scores.
 
     args:
-        monkeypatch: Scoped sentence view replacement.
+        monkeypatch: Scoped sentence window replacement.
+        winner: Index of the strongest source window.
 
     returns:
         None.
     """
-    beginning = "Opis okoliczności "
-    ending = "powództwo oddalono w całości."
-    text = beginning + "dalszy opis " * 100 + ending
-    matcher, encoder, _ = make_matcher({beginning: 0.1, ending: 0.95}, batch_size=1)
-    monkeypatch.setattr(encoder, "sentence_views", lambda source: [
-        {"text": beginning, "start": 0, "end": len(beginning)},
-        {"text": ending, "start": len(text) - len(ending), "end": len(text)},
-    ])
+    windows = ["Opis okoliczności ", "powództwo oddalono w całości ", "dalsze rozważania."]
+    text = "".join(windows)
+    scores = dict.fromkeys(windows, 0.1)
+    scores[windows[winner]] = 0.95
+    matcher, encoder, config = make_matcher(scores, batch_size=1)
+
+    def sentence_views(source, overlap):
+        """Supply source windows while checking the configured overlap is forwarded.
+
+        args:
+            source: Original judgment sentence.
+            overlap: Number of overlapping tokens requested by the matcher.
+
+        returns:
+            Three independently scored source windows.
+        """
+        assert source == text
+        assert overlap == config["embedding"]["window_overlap"]
+        return [
+            {"text": row, "start": text.index(row), "end": text.index(row) + len(row)}
+            for row in windows
+        ]
+
+    monkeypatch.setattr(encoder, "sentence_views", sentence_views)
     result = matcher.match_denial(text)
-    assert result["text"] == ending
+    assert result["text"] == windows[winner]
     assert result["similarity"] == pytest.approx(0.95)
-    assert text[result["start"]:result["end"]] == ending
-    assert encoder.calls[1:] == [[beginning], [ending]]
+    assert text[result["start"]:result["end"]] == windows[winner]
+    assert encoder.calls[1:] == [[row] for row in windows]
