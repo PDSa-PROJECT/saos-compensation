@@ -87,7 +87,7 @@ PLN_UNIT = r"(?:PLN|zł|złot(?:y|ego|emu|ym|e|ych|ymi)|złotówk(?:a|i|ę|ą|o|
 CURRENCY = re.compile(rf"\b{PLN_UNIT}\b", re.IGNORECASE)
 
 AMOUNT_NUMBER = (
-    r"(?:[0-9]{1,3}(?:[ .\u00a0\u202f][0-9]{3})+|[0-9]+)"
+    r"(?:[0-9]{1,3}(?:(?:[ \u00a0\u202f]|\.[ \u00a0\u202f]*)[0-9]{3})+|[0-9]+)"
     r"(?:,[0-9]+)?"
 )
 AMOUNT_SCALE = (

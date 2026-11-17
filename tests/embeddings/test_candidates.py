@@ -104,29 +104,6 @@ def test_candidate_filter_preserves_offsets_and_does_not_match_word_interiors():
     assert all(text[row["start"] : row["end"]] == row["text"] for row in rows)
 
 
-@pytest.mark.parametrize("separator", [", ", ","])
-def test_candidate_filter_grows_prefixes_without_splitting_decimal_amounts(
-    separator,
-):
-    """Keep a fixed sentence start while preserving decimal amounts and offsets.
-
-    args:
-        separator: Clause boundary with or without whitespace.
-
-    returns:
-        None.
-    """
-    text = "Nagłówek.\nZasądza 10 000,50 zł" + separator + "powód żądał 20 000,75 zł."
-    rows = target_matching.candidate_sentences(text, KEYWORDS)
-
-    assert [row["text"] for row in rows] == [
-        "Zasądza 10 000,50 zł,",
-    ]
-    assert [row["classes"] for row in rows] == [
-        ("judgment",),
-    ]
-    assert rows[0]["start"] == text.index("Zasądza")
-    assert all(text[row["start"] : row["end"]] == row["text"] for row in rows)
 
 
 def test_prefix_keeps_earlier_keyword_and_leaves_feature_sentences_intact():
@@ -227,47 +204,27 @@ def test_exclusion_keywords_also_select_sentences_before_embedding(text, group, 
     assert text[row["start"] : row["end"]] == text
 
 
-@pytest.mark.parametrize(
-    ("text", "classes"),
-    [
-        (
-            "Powód żąda zapłaty, po zakończeniu leczenia, kwoty 20000 zł, w tym 10000 zł odszkodowania.",
-            ("request",),
-        ),
-        (
-            "Koszty procesu, po ich wzajemnym rozliczeniu, wynoszą 470,50 zł, należne stronie pozwanej.",
-            ("procedural_costs",),
-        ),
-    ],
-)
-def test_growing_prefixes_preserve_earlier_request_and_cost_roles(text, classes):
-    """Keep role cues before several commas when monetary evidence appears later.
+
+
+
+
+def test_amount_windows_keep_five_words_on_both_sides_and_can_overlap():
+    """Preserve each independent amount anchor and exact bounded source context.
 
     args:
-        text: Sentence with its role before the first monetary clause.
-        classes: Eligible roles retained in every growing prefix.
+        None.
 
     returns:
         None.
     """
+    text = "Wstęp.\nZasądza jeden dwa trzy cztery pięć sześć 10 000,50 zł siedem osiem 200 zł dziewięć dziesięć jedenaście dwanaście trzynaście czternaście."
     rows = target_matching.candidate_sentences(text, KEYWORDS)
-    assert len(rows) == 1
-    assert {row["start"] for row in rows} == {0}
-    assert rows[0]["classes"] == classes
-    assert text.startswith(rows[0]["text"])
-    assert rows[0]["text"].endswith("zł,")
-    assert all(text[row["start"]:row["end"]] == row["text"] for row in rows)
-
-
-def test_first_monetary_prefix_without_keywords_does_not_borrow_later_role():
-    """Stop at the first monetary part even when only later parts contain role cues.
-
-    args:
-        None.
-
-    returns:
-        None.
-    """
-    assert target_matching.candidate_sentences(
-        "Kwota 100 zł, którą sąd zasądza powodowi.", KEYWORDS
-    ) == []
+    assert len(rows) == 2
+    first, second = rows
+    assert first["text"].startswith("dwa trzy cztery pięć sześć 10 000,50 zł")
+    assert first["text"].endswith("siedem osiem 200 zł dziewięć")
+    assert first["end"] > second["start"]
+    for row, amount in zip(rows, ["10 000,50 zł", "200 zł"], strict=True):
+        assert text[row["start"]:row["end"]] == row["text"]
+        assert text[row["amount_start"]:row["amount_end"]] == amount
+        assert text[row["sentence"]["start"]:row["sentence"]["end"]] == row["sentence"]["text"]

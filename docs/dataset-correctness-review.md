@@ -31,7 +31,7 @@ najpierw szukamy grup innych niz nasz target
 - wycinki mogą się zazębiać
 - jeśli dany wycinek (otoczenie kwoty) został przyporządkowany do konkretnej grupy, nie sprawdzamy go juz do targetu
 
-- nalezy zadać basalowi dokladniejsze pytania, ktore pozwolą rozroznic 
+- nalezy zadać basalowi dokladniejsze pytania, ktore pozwolą rozroznic
 
 ## Niepoprawne lub niepełne przypadki
 

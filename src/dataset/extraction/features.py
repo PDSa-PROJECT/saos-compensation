@@ -111,6 +111,8 @@ async def extract_features(server, text, config, identifier):
         Features, source evidence and model diagnostics with deliberate missing values.
     """
     fields = config["fields"]
+    subjects = config.get("beneficiaries", [])
+    subject_instructions = " Osoby objęte świadczeniem: " + "; ".join(subjects) + ". Opisuj tylko ich własną szkodę." if subjects else ""
     threshold = config["system_one"]["minimum_probability"]
     selected = feature_input(text, config)
     descriptions = {field: "brak informacji" for field in fields}
@@ -156,7 +158,7 @@ async def extract_features(server, text, config, identifier):
                         "schema": schema,
                         "instructions": config["questions"]["extraction"][
                             "instructions"
-                        ],
+                        ] + subject_instructions,
                     }
                 },
                 config,
@@ -199,6 +201,7 @@ async def extract_features(server, text, config, identifier):
                 context = config["context_characters"]
                 state = {
                     "oceniany_fragment": value,
+                    "osoby_objęte_świadczeniem": subjects,
                     "poprzedzajacy_kontekst": text[max(0, start - context) : start],
                     "nastepujacy_kontekst": text[end : end + context],
                 }
