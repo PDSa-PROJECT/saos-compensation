@@ -1,10 +1,14 @@
 embedding:
   model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-  revision: e8f8c211226b894fcb81acc59f3b34ba3efd5f42
+  revision: e8f8c211226b894fcb81acc59f3b34ba3efd5f42 #minilm identificator
   max_length: 128 # Longer sentences use all token windows, without dropping the tail.
   minimum_cosine_similarity: 0.85 # Strict threshold; any eligible non-target winner takes priority over judgment.
 
-  # Each amount uses five words before and after its exact PLN span.
+  # Word counts exclude the amount itself; zero keeps no context on that side.
+  context_words_before: 5
+  context_words_after: 5
+
+  # Context stays within its source clause.
   # Non-target matches above the threshold take priority over judgment.
   candidate_keywords:
     judgment:

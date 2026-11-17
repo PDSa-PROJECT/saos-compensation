@@ -13,7 +13,7 @@ The stages have separate configuration directories:
 | `configs/dataset/acquisition/api.yaml` | Broad search query, raw download dates, page/size limits, destination, console progress and HTTP timeout |
 | `configs/dataset/processing/process.yaml` | Local input/output paths, processed-output size limit, debug and locality timeout |
 | `configs/dataset/processing/features.yaml` | Selected metadata/numeric predictors and text extraction questions |
-| `configs/dataset/processing/targets.yaml` | Embedding model/device, candidate keywords, similarity threshold and target/exclusion patterns |
+| `configs/dataset/processing/targets.yaml` | Embedding model/device, candidate keywords, before/after context sizes, similarity threshold and target/exclusion patterns |
 | `configs/dataset/processing/basal.yaml` | Basal model/device and extraction/review thresholds |
 
 Acquisition defaults: `search_query: zadośćuczynienie`, `max_age_years: 10`, `max_pages: 0` (unlimited), `max_gib: 0.5`, `download_path: tmp/raw`, `debug: true`, `timeout: 20`. Page limits count judgment pages across resumptions, excluding court metadata. Raw debug controls only per-page console progress. Full raw responses, the download checkpoint and the final console summary are produced with either debug value.
@@ -29,12 +29,26 @@ uv run --no-sync process-data --input-path tmp/raw-five-years --output-path tmp/
 
 `--config-dir` selects another directory for the invoked stage only: raw downloading needs only `api.yaml`; processing needs `process.yaml`, `features.yaml`, `targets.yaml` and `basal.yaml`. Processing has no date or page-limit flags: the saved raw snapshot defines its input. Model and feature settings are changed in YAML.
 
+### Amount context
+
+Set the two context sizes independently in `configs/dataset/processing/targets.yaml`:
+
+```yaml
+embedding:
+  context_words_before: 5
+  context_words_after: 5
+```
+
+`context_words_before` caps the words searched backward from the amount. With fewer available words, the context begins at the start of the source sentence/clause. `context_words_after` independently caps forward context, stopping at that source boundary when necessary. Both fields are required and accept nonnegative integers; `0` disables that side. Words are counted by whitespace, and the complete amount itself is retained separately from these limits. Existing sentence/clause boundaries, full source evidence and amount offsets remain intact.
+
+Context sizes belong to the extraction configuration. Changing them requires a separate processing output path when resuming a dataset produced with other extraction settings.
+
 ### Models and devices
 
 The current models are:
 
 - **Remek/basal-2.0-4.5B:** extracts predictors and reviews factuality, relevance and leakage. `basal.yaml` can alternatively select the supported `Remek/basal-2.0-mini` checkpoint. Revisions are pinned in code.
-- **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2:** embeds target patterns and eligible five-word amount contexts to select a judgment amount sentence.
+- **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2:** embeds target patterns and eligible monetary contexts of configured word lengths to select a judgment amount sentence.
 
 Missing model files download automatically from Hugging Face and are reused from `basal_weights/` and `embedding_weights/`. Keep these caches outside a size-limited output directory. Locality population enrichment also downloads and caches a GUGiK snapshot under `tmp/gugik/`.
 
