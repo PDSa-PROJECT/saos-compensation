@@ -12,7 +12,6 @@ The current implementation prepares datasets and provides preprocessing utilitie
 - [x] Extract factual predictors and monetary targets
 - [x] Support resumable acquisition and local storage
 - [x] Provide reusable text embeddings and tabular/target preprocessing
-- [ ] Evaluate extraction accuracy and target leakage on labeled examples
 - [ ] Implement grouped train/validation/test splits
 - [ ] Combine text embeddings and tabular features
 - [ ] Train and evaluate a baseline regression model
