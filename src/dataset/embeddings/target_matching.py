@@ -7,7 +7,12 @@ from functools import lru_cache, partial
 from itertools import batched
 
 from ..extraction.source.text import MONEY, sentence_fragments
-from .encoding import create_embeddings, validate_settings as validate_encoder_settings
+from .encoding import (
+    ENCODER_SETTINGS,
+    cached_encoder,
+    create_embeddings,
+    validate_settings as validate_encoder_settings,
+)
 
 TARGET_CLASSES = ("judgment", "request")
 EXCLUDED_CLASSES = ("prior_payment", "procedural_costs", "mixed", "other_payments")
@@ -164,13 +169,14 @@ class TargetMatcher:
         args:
             settings: Embedding configuration and minimum similarity.
             patterns: Target and exclusion templates.
-            encoder: Optional existing sentence encoder.
+            encoder: Optional encoder with encode and sentence_views methods.
 
         returns:
             None.
         """
         validate_settings(settings, patterns)
         self.settings = settings
+        self.encoder = encoder
         self.patterns = [
             (label, phrase) for label, phrases in patterns.items() for phrase in phrases
         ]
@@ -182,7 +188,7 @@ class TargetMatcher:
         )
 
     def match_denial(self, text):
-        """Check full sentences for denial before any monetary candidate selection.
+        """Rank whole sentences or separate beginning/ending views for long denials.
 
         args:
             text: Full normalized judgment, including sentences without PLN or keywords.
@@ -200,12 +206,20 @@ class TargetMatcher:
             index for index, (label, _) in enumerate(self.patterns)
             if label == "procedural_costs"
         ]
+        encoder = self.encoder if self.encoder is not None else cached_encoder(
+            json.dumps({key: self.settings[key] for key in ENCODER_SETTINGS}, sort_keys=True)
+        )
         sentences = (
-            sentence
+            {
+                "text": view["text"],
+                "start": sentence["start"] + view["start"],
+                "end": sentence["start"] + view["end"],
+            }
             for line in re.finditer(r"[^\n]+", text)
             for sentence in sentence_fragments(
                 {"text": line[0], "start": line.start(), "end": line.end()}
             )
+            for view in encoder.sentence_views(sentence["text"])
         )
         result = None
         for batch in batched(sentences, self.settings["batch_size"]):

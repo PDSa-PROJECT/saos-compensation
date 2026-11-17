@@ -32,7 +32,7 @@ def validate_settings(settings):
 
 
 class SentenceEncoder:
-    """Mean-pooled multilingual embeddings with complete long-sentence coverage."""
+    """Mean-pooled sentence embeddings within the configured model context."""
 
     def __init__(self, settings):
         """
@@ -68,9 +68,29 @@ class SentenceEncoder:
         if settings["max_length"] > self.model.config.max_position_embeddings:
             raise ValueError("Embedding max_length exceeds the model context")
 
+    def sentence_views(self, text):
+        """Keep a fitting sentence whole or return its beginning and ending separately.
+
+        args:
+            text: Original source sentence.
+
+        returns:
+            One or two text spans with offsets relative to the original sentence.
+        """
+        tokens = self.tokenizer(
+            text, add_special_tokens=False, truncation=False,
+            return_offsets_mapping=True, verbose=False,
+        )
+        limit = self.settings["max_length"] - self.tokenizer.num_special_tokens_to_add()
+        offsets = tokens["offset_mapping"]
+        spans = [(0, len(text))] if len(offsets) <= limit else [
+            (0, offsets[limit - 1][1]), (offsets[-limit][0], len(text))
+        ]
+        return [{"text": text[start:end], "start": start, "end": end} for start, end in spans]
+
     def encode(self, texts):
         """
-        Batch all token windows and pool them back into one vector per input sentence.
+        Encode each sentence once, truncating its tail beyond the configured limit.
 
         args:
             texts: Nonempty list of texts to encode.
@@ -80,30 +100,25 @@ class SentenceEncoder:
         """
         import torch
 
-        tokens = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=self.settings["max_length"],
-            return_overflowing_tokens=True,
-            return_tensors="pt",
-        )
-        mapping = tokens.pop("overflow_to_sample_mapping")
         device = self.settings["device"]
-        sums = torch.zeros((len(texts), self.model.config.hidden_size), device=device)
-        counts = torch.zeros((len(texts), 1), device=device)
+        vectors = []
         with torch.inference_mode():
-            for start in range(0, len(mapping), self.settings["batch_size"]):
+            for start in range(0, len(texts), self.settings["batch_size"]):
                 end = start + self.settings["batch_size"]
+                tokens = self.tokenizer(
+                    texts[start:end],
+                    padding=True,
+                    truncation=True,
+                    max_length=self.settings["max_length"],
+                    return_tensors="pt",
+                )
                 batch = {
-                    key: value[start:end].to(device) for key, value in tokens.items()
+                    key: value.to(device) for key, value in tokens.items()
                 }
                 output = self.model(**batch).last_hidden_state.float()
                 mask = batch["attention_mask"].unsqueeze(-1).float()
-                indices = mapping[start:end].to(device)
-                sums.index_add_(0, indices, (output * mask).sum(dim=1))
-                counts.index_add_(0, indices, mask.sum(dim=1))
-        return sums / counts.clamp_min(1)
+                vectors.append((output * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1))
+        return torch.cat(vectors)
 
 
 @lru_cache(maxsize=1)
@@ -129,7 +144,7 @@ def create_embeddings(texts, settings):
 
     returns:
         Float32 PyTorch tensor of shape (len(texts), model dimension) on the
-        configured device. Long texts use all token windows with mean pooling.
+        configured device. Text beyond max_length tokens is truncated at the tail.
     """
     validate_settings(settings)
     if not isinstance(texts, list) or not texts or any(

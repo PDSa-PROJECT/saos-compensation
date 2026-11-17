@@ -467,7 +467,21 @@ def test_mutual_cost_settlement_is_excluded_without_denial(monkeypatch, with_awa
             for text in texts
         ])
 
-    matcher = TargetMatcher(config["embedding"], patterns, SimpleNamespace(encode=encode))
+    def sentence_views(source):
+        """Keep short source sentences whole for controlled role comparisons.
+
+        args:
+            source: Original source sentence.
+
+        returns:
+            One span with exact source offsets.
+        """
+        return [{"text": source, "start": 0, "end": len(source)}]
+
+    matcher = TargetMatcher(
+        config["embedding"], patterns,
+        SimpleNamespace(encode=encode, sentence_views=sentence_views),
+    )
     monkeypatch.setattr(target_matching, "cached_matcher", lambda *args: matcher)
     text = cost + ("\n" + award if with_award else "")
     result = asyncio.run(extract_targets(None, text, config))

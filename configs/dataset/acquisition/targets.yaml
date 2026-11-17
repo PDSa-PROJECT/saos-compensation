@@ -3,7 +3,7 @@ embedding:
   revision: e8f8c211226b894fcb81acc59f3b34ba3efd5f42
   device: mps # cpu, mps or cuda.
   batch_size: 64
-  max_length: 128 # Longer sentences use all token windows, without dropping the tail.
+  max_length: 512 # Long denial sentences use separate beginning and ending views.
   minimum_cosine_similarity: 0.7 # Winning score must be strictly greater. If more than one is, highest score wins
   denial_minimum_cosine_similarity: 0.85 # Full denial uses its own stricter threshold.
 

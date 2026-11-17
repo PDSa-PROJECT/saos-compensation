@@ -26,6 +26,17 @@ class Encoder:
         self.costs = {target_matching.prepare_text(text): score for text, score in (costs or {}).items()}
         self.calls = []
 
+    def sentence_views(self, text):
+        """Keep controlled short sentences as a single source span.
+
+        args:
+            text: Original test sentence.
+
+        returns:
+            One source span covering the sentence.
+        """
+        return [{"text": text, "start": 0, "end": len(text)}]
+
     def encode(self, texts):
         """Encode orthogonal patterns and unit vectors for source sentences.
 
@@ -262,3 +273,27 @@ def test_equal_denial_scores_keep_first_source_sentence():
     sentences = ["Pierwsze oddalenie.", "Drugie oddalenie."]
     matcher, _, _ = make_matcher(dict.fromkeys(sentences, 0.9), batch_size=1)
     assert matcher.match_denial("\n".join(sentences))["text"] == sentences[0]
+
+
+def test_long_sentence_ending_competes_independently_with_its_beginning(monkeypatch):
+    """Select denial evidence from the ending without averaging both view scores.
+
+    args:
+        monkeypatch: Scoped sentence view replacement.
+
+    returns:
+        None.
+    """
+    beginning = "Opis okoliczności "
+    ending = "powództwo oddalono w całości."
+    text = beginning + "dalszy opis " * 100 + ending
+    matcher, encoder, _ = make_matcher({beginning: 0.1, ending: 0.95}, batch_size=1)
+    monkeypatch.setattr(encoder, "sentence_views", lambda source: [
+        {"text": beginning, "start": 0, "end": len(beginning)},
+        {"text": ending, "start": len(text) - len(ending), "end": len(text)},
+    ])
+    result = matcher.match_denial(text)
+    assert result["text"] == ending
+    assert result["similarity"] == pytest.approx(0.95)
+    assert text[result["start"]:result["end"]] == ending
+    assert encoder.calls[1:] == [[beginning], [ending]]
