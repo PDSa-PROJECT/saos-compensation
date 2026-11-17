@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from dataset.acquisition import pipeline
+from dataset.processing import pipeline
 from dataset.extraction.model import configuration as config_module
 from dataset.extraction.targets import amounts
 
@@ -45,8 +45,8 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
         None.
     """
     config = config_module.load_config()
-    config["api"]["debug"] = debug
-    config["api"]["max_gib"] = 0
+    config["processing"]["debug"] = debug
+    config["processing"]["max_gib"] = 0
     config["metadata_fields"] = ["judgment_year", "instance", "court_seat"]
     config["system_one"]["device"] = "cpu"
     config["embedding"]["device"] = "cpu"
@@ -105,7 +105,7 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
         assert "low-confidence award" in output
     if missing_target:
         assert "final award verification not run" in output
-    directory = tmp_path / "tmp"
+    directory = tmp_path / "tmp/processed"
     path = directory / "42"
     if text_field != "damage" or sparse_features or ((low_confidence or missing_target) and not debug):
         assert not path.exists()
@@ -152,7 +152,7 @@ def test_failed_extraction_keeps_pending_state_for_resume(
     from dataset.extraction.model import decisions
 
     config = config_module.load_config()
-    config["api"].update(debug=False, max_gib=0)
+    config["processing"].update(debug=False, max_gib=0)
     config["metadata_fields"] = []
     config["system_one"]["device"] = "cpu"
     config["embedding"]["device"] = "cpu"
@@ -176,7 +176,7 @@ def test_failed_extraction_keeps_pending_state_for_resume(
         asyncio.run(
             pipeline.run(config, extractor=fake_extractor.context, record_source=record_source)
         )
-    directory = output_root / config["api"]["download_path"]
+    directory = output_root / config["processing"]["output_path"]
     assert {path.name for path in (directory / "42/pending").iterdir()} == {
         "judgment.json", "config.json", "source.txt"
     }
@@ -201,10 +201,10 @@ def test_completed_checkpoint_does_not_start_extraction(output_root, fake_extrac
     from dataset.storage.checkpoints import load_checkpoint, save_checkpoint
 
     config = config_module.load_config()
-    config["api"]["max_gib"] = 0
+    config["processing"]["max_gib"] = 0
     checkpoint = load_checkpoint(config)
-    checkpoint["complete"] = True
-    directory = output_root / config["api"]["download_path"]
+    checkpoint.update(complete=True, page=1)
+    directory = output_root / config["processing"]["output_path"]
     save_checkpoint(directory, checkpoint)
     original = (directory / "checkpoint.json").read_bytes()
     asyncio.run(pipeline.run(config, extractor=fake_extractor.context))
@@ -229,7 +229,7 @@ def test_denied_case_saves_zero_with_damage(
         None.
     """
     config = config_module.load_config(overrides={"debug": debug})
-    config["api"]["max_gib"] = 0
+    config["processing"]["max_gib"] = 0
     config["metadata_fields"] = []
     config["system_one"]["device"] = config["embedding"]["device"] = "cpu"
     field = "damage"
@@ -261,7 +261,7 @@ def test_denied_case_saves_zero_with_damage(
 
     fake_extractor.extract = extract
     asyncio.run(pipeline.run(config, extractor=fake_extractor.context, record_source=record_source))
-    path = output_root / config["api"]["download_path"] / "42"
+    path = output_root / config["processing"]["output_path"] / "42"
     assert json.loads((path / "award.json").read_text()) == {"total": "0", "valid": True}
     assert json.loads((path / "record.json").read_text()) == {"damage": "Opis."}
     assert not (path / "pending").exists()

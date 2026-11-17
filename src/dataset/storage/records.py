@@ -53,7 +53,7 @@ def write_result(result, directory, config):
     """
     award = result["award"]
     valid = rejection_reason(result, config) is None
-    if config["api"]["debug"] and not valid:
+    if config["processing"]["debug"] and not valid:
         award = award.get("proposal", award)
     features = {
         field: "not_available" if value == "brak informacji" else value
@@ -65,7 +65,7 @@ def write_result(result, directory, config):
         else award["suma"],
     }
     targets["valid"] = valid
-    if config["api"]["debug"]:
+    if config["processing"]["debug"]:
         write_json(directory / "model_calls.json", result.get("model_calls", []))
         write_bytes(directory / "source.txt", result["source_text"].encode("utf-8"))
     write_json(directory / "award.json", targets)

@@ -1,24 +1,22 @@
+"""Module entry points for both independent stages."""
+
 import subprocess
 import sys
 
+import pytest
 
-def test_module_help(tmp_path):
-    """
-    Verify the module CLI works outside the repository.
+
+@pytest.mark.parametrize("module,flag", [("dataset.cli", "--download-path"), ("dataset.cli.process", "--input-path")])
+def test_module_help(tmp_path, module, flag):
+    """Run each CLI module outside the checkout without source-path modifications.
 
     args:
-        tmp_path: Working directory without project source files.
+        tmp_path: Independent working directory.
+        module: Stage-specific module.
+        flag: Expected stage-specific option.
 
     returns:
         None.
     """
-    result = subprocess.run(
-        [sys.executable, "-m", "dataset.cli", "--help"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    assert "--download-path" in result.stdout
-    assert "--no-debug" in result.stdout
+    result = subprocess.run([sys.executable, "-m", module, "--help"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    assert flag in result.stdout and "--no-debug" in result.stdout

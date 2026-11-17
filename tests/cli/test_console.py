@@ -1,34 +1,39 @@
+"""Installed console entry points independent of the current directory."""
+
 from pathlib import Path
 import subprocess
 import sys
 
+import pytest
 
-def test_get_data_help(tmp_path):
-    """Verify the installed command exposes acquisition options outside the repository.
+
+@pytest.mark.parametrize("command,options", [
+    ("get-raw-data", ["--max-age-years", "--max-pages", "--max-gib", "--download-path", "--timeout", "--debug", "--no-debug"]),
+    ("process-data", ["--input-path", "--output-path", "--max-gib", "--debug", "--no-debug"]),
+])
+def test_installed_command_help(tmp_path, command, options):
+    """Expose each command's own options outside the source checkout.
 
     args:
-        tmp_path: Working directory without project source files.
+        tmp_path: Working directory without source files.
+        command: Installed console entry point.
+        options: Options expected for this stage.
 
     returns:
         None.
     """
-    result = subprocess.run(
-        [str(Path(sys.executable).parent / "get-data"), "--help"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    result = subprocess.run([str(Path(sys.executable).parent / command), "--help"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    assert f"usage: {command}" in result.stdout
+    assert all(option in result.stdout for option in options)
 
-    assert "usage: get-data" in result.stdout
-    for option in (
-        "--config-dir",
-        "--max-age-years",
-        "--max-pages",
-        "--max-gib",
-        "--download-path",
-        "--timeout",
-        "--debug",
-        "--no-debug",
-    ):
-        assert option in result.stdout
+
+def test_raw_cli_imports_no_processing_or_inference_modules():
+    """Keep download startup independent of extraction and accelerator packages.
+
+    args:
+        None.
+
+    returns:
+        None.
+    """
+    subprocess.run([sys.executable, "-c", "import dataset.cli.main; import sys; assert not any(name in sys.modules for name in ('torch', 'transformers', 'basal', 'dataset.processing.pipeline', 'dataset.extraction'))"], check=True)

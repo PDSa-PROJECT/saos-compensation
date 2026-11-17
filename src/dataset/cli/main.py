@@ -1,7 +1,6 @@
-"""Download and filter judgments."""
+"""Download unmodified SAOS JSON without model processing."""
 
 import argparse
-import asyncio
 
 from ..acquisition.pipeline import run
 
@@ -18,7 +17,7 @@ def parse_arguments(arguments=None):
     """
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="Explicit CLI options override api.yaml; model settings are in basal.yaml.",
+        epilog="Explicit CLI options override acquisition/api.yaml; use process-data for extraction.",
     )
     parser.add_argument(
         "--config-dir",
@@ -57,14 +56,14 @@ def parse_arguments(arguments=None):
         "--debug",
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
-        help="Save source/model calls and retain failed extraction attempts with valid=false",
+        help="Print per-page download progress; raw JSON is always saved",
     )
     return parser.parse_args(arguments)
 
 
 def main():
     """
-    Load effective settings and run the dataset pipeline.
+    Load download settings and run raw acquisition.
 
     args:
         None
@@ -72,15 +71,15 @@ def main():
     returns:
         None.
     """
-    from ..extraction.model.configuration import load_config
+    from ..acquisition.settings import load_config
 
     options = vars(parse_arguments())
     directory = options.pop("config_dir")
     try:
-        asyncio.run(run(load_config(directory, options)))
+        run(load_config(directory, options))
     except KeyboardInterrupt:
         print(
-            "Interrupted. Completed model decisions are saved; rerun the same command to resume.",
+            "Interrupted. Saved raw pages are preserved; rerun get-raw-data to resume.",
             flush=True,
         )
         raise SystemExit(130)

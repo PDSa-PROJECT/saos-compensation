@@ -1,453 +1,240 @@
-from datetime import date
+"""Raw acquisition durability, separation and resume contracts."""
+
 import json
 
 import pytest
 import requests
 
-from dataset.acquisition import download as acquisition
-from dataset.acquisition.settings import search_settings
-from dataset.extraction.model import configuration as config_module
+from dataset.acquisition import download
+from dataset.acquisition.settings import load_config
 from dataset.storage import checkpoints
-from dataset.storage import files as storage
-from dataset.storage import records
-
-CONFIG = {
-    "max_age_years": 10,
-    "max_pages": 0,
-    "max_gib": 0,
-    "debug": False,
-    "download_path": "tmp/",
-    "timeout": 30,
-}
+from dataset.storage.raw import page_path, read_page
 
 
-@pytest.mark.parametrize("debug", [False, True])
-def test_download_deduplicates_filters_and_reports_rejections(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    debug,
-    capsys,
-):
-    """
-    Verify download deduplicates filters and reports rejections.
+@pytest.fixture
+def raw_download(monkeypatch, tmp_path):
+    """Isolate raw output and replace only the external HTTP boundary.
 
     args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        debug: Whether to save diagnostic artifacts.
-        capsys: Captured console output.
+        monkeypatch: Scoped overrides.
+        tmp_path: Isolated output root.
 
     returns:
-        None.
+        Settings and captured page requests.
     """
-    data = judgment_payload["data"]
-    division = data["division"]
-    valid = {**data, "division": {"id": division["id"]}}
-    invalid = {**valid, "id": 254931, "textContent": None}
-    irrelevant = {**valid, "id": 254932, "textContent": "<p>Inna sprawa.</p>"}
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: iter(
-            [(0, {"items": [valid, valid, invalid, irrelevant], "links": []})]
-        ),
-    )
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    config = config_module.load_config(overrides={**CONFIG, "debug": debug})
-    checkpoint = checkpoints.load_checkpoint(config)
-    records = []
-    for record in acquisition.download(config["api"], checkpoint, "run"):
-        records.append(record)
-        storage.write_json(
-            tmp_path / "tmp" / str(record["id"]) / "record.json",
-            {
-                "id": record["id"],
-                "dataset_id": checkpoint["dataset_id"],
-                "features": {},
-                "targets": {},
-            },
-        )
-    assert [record["id"] for record in records] == [254930]
-    assert records[0]["division"] == division
-    report = json.loads(capsys.readouterr().out)
-    assert (
-        report["complete"]
-        and report["accepted"] == report["duplicates"] == report["filtered"] == 1
-    )
-    assert report["rejected"] == [{"id": 254931, "reason": "Missing judgment text"}]
-    assert not (tmp_path / "tmp/debug").exists()
-    assert checkpoint["complete"]
+    for module in (download, checkpoints):
+        monkeypatch.setattr(module, "ROOT", tmp_path)
+    calls = []
 
-
-def test_partial_network_failure_is_visible(output_root, monkeypatch, tmp_path, capsys):
-    """
-    Verify partial network failure is visible.
-
-    args:
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        capsys: Captured console output.
-
-    returns:
-        None.
-    """
-
-    def fail(*args):
-        """
-        Provide the fail behavior used by this operation.
+    def courts(number, session, timeout):
+        """Return an unprocessed court page.
 
         args:
-            args: Input for this operation.
+            number: Requested page.
+            session: Shared session.
+            timeout: HTTP timeout.
 
         returns:
-            Result of this operation.
+            Original court payload.
         """
-        raise requests.Timeout("SAOS unavailable")
+        calls.append(("court", number, session, timeout))
+        return {"items": [{"id": 1, "unknown": True}], "links": []}
 
-    monkeypatch.setattr(acquisition, "search_pages", fail)
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    storage.write_json(tmp_path / "tmp/checkpoint.json", checkpoint)
+    def judgments(params, session=None, timeout=None):
+        """Return mixed raw items without domain selection.
+
+        args:
+            params: Requested query.
+            session: Shared session.
+            timeout: HTTP timeout.
+
+        returns:
+            Original judgment payload.
+        """
+        number = params["pageNumber"]
+        calls.append(("judgment", number, session, timeout))
+        return {
+            "items": [{"id": number + 10, "courtType": "SUPREME", "textContent": "<p>Bez kwoty.</p>", "extra": [None, 7]}],
+            "links": [{"rel": "next", "href": "next"}] if number == 0 else [],
+            "queryTemplate": {key: {"value": value} for key, value in params.items()},
+            "unknown": {"preserved": True},
+        }
+
+    monkeypatch.setattr(download.api, "search_courts", courts)
+    monkeypatch.setattr(download.api, "search_judgments", judgments)
+    return load_config(overrides={"download_path": "raw", "max_gib": 0, "debug": False, "timeout": 60}), calls
+
+
+def test_raw_pages_preserve_all_data_and_share_session(raw_download, tmp_path):
+    """Retain unrelated cases and unknown fields without loading extraction.
+
+    args:
+        raw_download: Mock HTTP setup.
+        tmp_path: Isolated output root.
+
+    returns:
+        None.
+    """
+    config, calls = raw_download
+    download.download(config)
+    page = read_page(page_path(tmp_path / "raw", "judgments", 0))
+    assert page["items"][0]["textContent"] == "<p>Bez kwoty.</p>"
+    assert page["items"][0]["extra"] == [None, 7]
+    assert page["unknown"] == {"preserved": True}
+    assert len({id(call[2]) for call in calls}) == 1
+    assert all(call[3] == 60 for call in calls)
+    state = checkpoints.load_raw_checkpoint(config)
+    assert state["page"] == 2 and state["complete"]
+    assert {path.name for path in (tmp_path / "raw").iterdir()} == {"checkpoint.json", "common_courts", "judgments"}
+
+
+def test_http_failure_resumes_only_unsaved_page(raw_download, monkeypatch, tmp_path):
+    """Keep committed pages after an external failure.
+
+    args:
+        raw_download: Mock HTTP setup.
+        monkeypatch: Scoped overrides.
+        tmp_path: Isolated output root.
+
+    returns:
+        None.
+    """
+    config, calls = raw_download
+    original = download.api.search_judgments
+
+    def fail_second(params, **kwargs):
+        """Fail once the first page is committed.
+
+        args:
+            params: Requested query.
+            kwargs: HTTP controls.
+
+        returns:
+            First page or an explicit timeout.
+        """
+        if params["pageNumber"] == 1:
+            raise requests.Timeout("interrupted")
+        return original(params, **kwargs)
+
+    monkeypatch.setattr(download.api, "search_judgments", fail_second)
     with pytest.raises(requests.Timeout):
-        list(acquisition.download(CONFIG, checkpoint, "run"))
-    report = json.loads(capsys.readouterr().out)
-    assert not report["complete"] and report["error"] == "SAOS unavailable"
-    assert (tmp_path / "tmp/checkpoint.json").exists()
-    assert not (tmp_path / "tmp/debug").exists()
+        download.download(config)
+    assert checkpoints.load_raw_checkpoint(config)["page"] == 1
+    before = page_path(tmp_path / "raw", "judgments", 0).read_bytes()
+    monkeypatch.setattr(download.api, "search_judgments", original)
+    calls.clear()
+    download.download(config)
+    assert [(call[0], call[1]) for call in calls] == [("judgment", 1)]
+    assert page_path(tmp_path / "raw", "judgments", 0).read_bytes() == before
 
 
-def test_checkpoint_freezes_dates_and_allows_operational_overrides(
-    output_root,
-    monkeypatch,
-    tmp_path,
-):
-    """
-    Verify checkpoint freezes dates and allows operational overrides.
+def test_page_saved_before_checkpoint_is_reused(raw_download, monkeypatch):
+    """Recover a durable page without requesting it again.
 
     args:
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
+        raw_download: Mock HTTP setup.
+        monkeypatch: Scoped overrides.
 
     returns:
         None.
     """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    checkpoint["request"] = search_settings(CONFIG, date(2024, 2, 29))[2]
-    storage.write_json(tmp_path / "tmp/checkpoint.json", checkpoint)
-    changed = config_module.load_config(
-        overrides={**CONFIG, "debug": True, "timeout": 5, "max_pages": 2, "max_gib": 5}
-    )
-    assert checkpoints.load_checkpoint(changed) == checkpoint
-    changed["system_one"]["minimum_probability"] = 0.8
-    with pytest.raises(ValueError, match="Extraction settings changed"):
-        checkpoints.load_checkpoint(changed)
+    config, calls = raw_download
+    original = download.save_checkpoint
 
-
-def test_resume_skips_committed_records_and_retries_only_unfinished_item(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    capsys,
-):
-    """
-    Verify resume skips committed records and retries only unfinished item.
-
-    args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        capsys: Captured console output.
-
-    returns:
-        None.
-    """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    data = judgment_payload["data"]
-    division = data["division"]
-    items = [
-        {**data, "id": identifier, "division": {"id": division["id"]}}
-        for identifier in (1, 2, 3)
-    ]
-    starts = []
-
-    def pages(*args):
-        """
-        Provide the pages behavior used by this operation.
+    def interrupted(directory, state):
+        """Interrupt the first judgment checkpoint write.
 
         args:
-            args: Input for this operation.
+            directory: Output root.
+            state: Pending checkpoint.
 
         returns:
-            Result of this operation.
+            None.
         """
-        starts.append(args[4])
-        return iter([(0, {"items": items, "links": [{"rel": "next"}]})])
+        if state["page"] == 1:
+            raise OSError("checkpoint interrupted")
+        original(directory, state)
 
-    monkeypatch.setattr(acquisition, "search_pages", pages)
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    stream = acquisition.download(config["api"], checkpoint, "first")
-    assert next(stream)["id"] == 1
-    storage.write_json(
-        tmp_path / "tmp/1/record.json",
-        {
-            "id": 1,
-            "dataset_id": checkpoint["dataset_id"],
-            "features": {},
-            "targets": {},
-        },
-    )
-    assert next(stream)["id"] == 2
-    stream.close()
-    resumed = checkpoints.load_checkpoint(config)
-    assert resumed["next_item"] == 1
-    stream = acquisition.download(config["api"], resumed, "second")
-    assert next(stream)["id"] == 2
-    stream.close()
-    assert starts == [0, 0]
-    assert (tmp_path / "tmp/1/record.json").exists()
-    capsys.readouterr()
+    monkeypatch.setattr(download, "save_checkpoint", interrupted)
+    with pytest.raises(OSError):
+        download.download(config)
+    assert checkpoints.load_raw_checkpoint(config)["page"] == 0
+    monkeypatch.setattr(download, "save_checkpoint", original)
+    calls.clear()
+    download.download(config)
+    assert [(call[0], call[1]) for call in calls] == [("judgment", 1)]
 
 
-def test_resume_recognizes_record_saved_before_checkpoint_advance(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    capsys,
-):
-    """
-    Verify resume recognizes record saved before checkpoint advance.
+def test_raw_resume_allows_operational_changes_but_pins_dates(raw_download):
+    """Allow page-limit extension while protecting dataset date bounds.
 
     args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        capsys: Captured console output.
+        raw_download: Mock HTTP setup.
 
     returns:
         None.
     """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    data = judgment_payload["data"]
-    division = data["division"]
-    item = {**data, "division": {"id": division["id"]}}
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: iter([(0, {"items": [item], "links": []})]),
-    )
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    stream = acquisition.download(config["api"], checkpoint, "first")
-    assert next(stream)["id"] == data["id"]
-    storage.write_json(
-        tmp_path / "tmp" / str(data["id"]) / "record.json",
-        {
-            "id": data["id"],
-            "dataset_id": checkpoint["dataset_id"],
-            "features": {},
-            "targets": {},
-        },
-    )
-    stream.close()
-    resumed = checkpoints.load_checkpoint(config)
-    assert list(acquisition.download(config["api"], resumed, "second")) == []
-    assert resumed["complete"]
-    capsys.readouterr()
+    config, calls = raw_download
+    config["max_pages"] = 1
+    download.download(config)
+    state = checkpoints.load_raw_checkpoint(config)
+    assert not state["complete"] and state["page"] == 1
+    download.download({**config, "max_pages": 2, "debug": True, "timeout": 12, "max_gib": 1})
+    assert checkpoints.load_raw_checkpoint(config)["complete"]
+    assert calls[-1][1] == 1 and calls[-1][3] == 12
+    with pytest.raises(ValueError, match="date settings changed"):
+        checkpoints.load_raw_checkpoint({**config, "max_age_years": 5})
 
 
-def test_changed_resume_page_is_rejected(output_root, monkeypatch, tmp_path, capsys):
-    """
-    Verify changed resume page is rejected.
+def test_failed_page_write_does_not_advance(raw_download, monkeypatch):
+    """Leave the cursor retryable when a page cannot become durable.
 
     args:
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        capsys: Captured console output.
+        raw_download: Mock HTTP setup.
+        monkeypatch: Scoped overrides.
 
     returns:
         None.
     """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    checkpoint["page_ids"] = [1]
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: iter([(0, {"items": [{"id": 2}], "links": []})]),
-    )
-    with pytest.raises(ValueError, match="page contents changed"):
-        list(acquisition.download(config["api"], checkpoint, "run"))
-    assert not checkpoint["complete"]
-    capsys.readouterr()
+    config, _ = raw_download
+    original = download.write_page
 
-
-def test_checkpoint_does_not_advance_without_saved_output(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    capsys,
-):
-    """
-    Verify checkpoint does not advance without saved output.
-
-    args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        capsys: Captured console output.
-
-    returns:
-        None.
-    """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    data = judgment_payload["data"]
-    division = data["division"]
-    item = {**data, "division": {"id": division["id"]}}
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: iter([(0, {"items": [item], "links": []})]),
-    )
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    stream = acquisition.download(config["api"], checkpoint, "run")
-    next(stream)
-    with pytest.raises(RuntimeError, match="completed record"):
-        next(stream)
-    assert checkpoints.load_checkpoint(config)["next_item"] == 0
-    capsys.readouterr()
-
-
-def test_resume_starts_at_next_page_after_network_failure(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    capsys,
-):
-    """
-    Keep completed pages committed when fetching the next page fails.
-
-    args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped dependency replacements.
-        tmp_path: Isolated output directory.
-        capsys: Captured acquisition reports.
-
-    returns:
-        None.
-    """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    data = judgment_payload["data"]
-    division = data["division"]
-    item = {**data, "division": {"id": division["id"]}}
-
-    def pages(*args):
-        """
-        Yield one page before simulating a network interruption.
+    def fail_judgment(path, payload):
+        """Reject judgment writes after saving courts.
 
         args:
-            args: Acquisition arguments including the starting page.
+            path: Destination.
+            payload: Raw response.
 
         returns:
-            Iterator of the first page.
+            None.
         """
-        assert args[4] == 0
-        yield 0, {"items": [item], "links": [{"rel": "next"}]}
-        raise requests.Timeout("offline")
+        if path.parent.name == "judgments":
+            raise OSError("disk unavailable")
+        original(path, payload)
 
-    monkeypatch.setattr(acquisition, "search_pages", pages)
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    stream = acquisition.download(config["api"], checkpoint, "first")
-    next(stream)
-    storage.write_json(
-        tmp_path / "tmp" / str(data["id"]) / "record.json",
-        {
-            "id": data["id"],
-            "dataset_id": checkpoint["dataset_id"],
-            "features": {},
-            "targets": {},
-        },
-    )
-    with pytest.raises(requests.Timeout):
-        next(stream)
-    resumed = checkpoints.load_checkpoint(config)
-    assert resumed["page"] == 1 and resumed["next_item"] == 0
-    starts = []
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: starts.append(args[4]) or iter([(1, {"items": [], "links": []})]),
-    )
-    assert list(acquisition.download(config["api"], resumed, "second")) == []
-    assert starts == [1] and resumed["complete"]
-    capsys.readouterr()
+    monkeypatch.setattr(download, "write_page", fail_judgment)
+    with pytest.raises(OSError):
+        download.download(config)
+    assert checkpoints.load_raw_checkpoint(config)["page"] == 0
 
 
-def test_rejected_record_advances_checkpoint_without_case_files(
-    output_root,
-    judgment_payload,
-    monkeypatch,
-    tmp_path,
-    capsys,
-):
-    """
-    Continue after explicit rejection without persisting case artifacts.
+def test_raw_size_limit_and_legacy_artifacts_are_preserved(raw_download, tmp_path):
+    """Refuse oversized output and unrelated preexisting artifacts.
 
     args:
-        judgment_payload: Fresh structurally valid SAOS source payload.
-        output_root: Isolated acquisition output root.
-        monkeypatch: Scoped dependency replacements.
-        tmp_path: Isolated dataset directory.
-        capsys: Captured progress reports.
+        raw_download: Mock HTTP setup.
+        tmp_path: Isolated output root.
 
     returns:
         None.
     """
-    config = config_module.load_config(overrides=CONFIG)
-    checkpoint = checkpoints.load_checkpoint(config)
-    data = judgment_payload["data"]
-    division = data["division"]
-    item = {**data, "division": {"id": division["id"]}}
-    monkeypatch.setattr(
-        acquisition,
-        "search_pages",
-        lambda *args: iter([(0, {"items": [item], "links": []})]),
-    )
-    monkeypatch.setattr(
-        acquisition, "load_divisions", lambda *args: {division["id"]: division}
-    )
-    stream = acquisition.download(config["api"], checkpoint, "run")
-    record = next(stream)
-    record["rejected"] = True
-    assert list(stream) == []
-    assert checkpoints.load_checkpoint(config)["complete"]
-    assert not (tmp_path / "tmp" / str(data["id"])).exists()
-    capsys.readouterr()
+    config, _ = raw_download
+    download.download({**config, "max_gib": 1 / 1024**3})
+    assert sum(path.stat().st_size for path in (tmp_path / "raw").rglob("*") if path.is_file()) <= 1
+    legacy = tmp_path / "legacy"
+    legacy.mkdir()
+    (legacy / "checkpoint.json").write_text(json.dumps({"page": 3}))
+    with pytest.raises(ValueError, match="raw checkpoint"):
+        download.download({**config, "download_path": "legacy"})
+    assert json.loads((legacy / "checkpoint.json").read_text()) == {"page": 3}

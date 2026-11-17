@@ -20,7 +20,8 @@ dependencies = [
 ]
 
 [project.scripts]
-get-data = "dataset.cli.main:main"
+get-raw-data = "dataset.cli.main:main"
+process-data = "dataset.cli.process:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -135,57 +135,31 @@ def search_judgments(params, directory=None, session=None, timeout=30):
     return result
 
 
-def load_divisions(session, directory=None, timeout=30):
-    """
-    Build a division-to-court lookup from the official court dump.
+
+def search_courts(page, session=None, timeout=30):
+    """Fetch one raw court dump page and validate its transport envelope.
 
     args:
-        session: Reusable HTTP session, when supplied.
-        directory: Input or output directory for this operation.
-        timeout: Connection/read timeout in seconds.
+        page: Zero-based court dump page.
+        session: Shared HTTP session.
+        timeout: Explicit HTTP timeout in seconds.
 
     returns:
-        Division records indexed by identifier.
+        Original court response, retaining every API field.
     """
-    divisions = {}
-    page = 0
-    while True:
-        url = f"{BASE_URL}/dump/commonCourts?pageSize=100&pageNumber={page}"
-        payload = fetch_json(url, directory, session, timeout)
-        if not isinstance(payload.get("items"), list) or not isinstance(
-            payload.get("links"), list
-        ):
-            raise ValueError("Invalid common-court dump")
-        for court in payload["items"]:
-            if (
-                not isinstance(court, dict)
-                or type(court.get("id")) is not int
-                or court["id"] <= 0
-                or not isinstance(court.get("name"), str)
-                or not court["name"].strip()
-                or not isinstance(court.get("divisions"), list)
-                or court.get("type") not in {"DISTRICT", "REGIONAL", "APPEAL"}
-            ):
-                raise ValueError("Invalid court in dump")
-            for division in court["divisions"]:
-                if not isinstance(division, dict):
-                    raise ValueError("Invalid division in court dump")
-                identifier = division.get("id")
-                if (
-                    type(identifier) is not int
-                    or identifier <= 0
-                    or not isinstance(division.get("name"), str)
-                    or identifier in divisions
-                ):
-                    raise ValueError("Invalid or duplicate division in dump")
-                divisions[identifier] = {
-                    **division,
-                    "court": {key: court[key] for key in ("id", "name", "type")},
-                }
-        if any(not isinstance(link, dict) for link in payload["links"]):
+    payload = fetch_json(f"{BASE_URL}/dump/commonCourts?pageSize=100&pageNumber={page}", session=session, timeout=timeout)
+    if not isinstance(payload.get("items"), list) or not isinstance(payload.get("links"), list):
+        raise ValueError("Invalid common-court dump")
+    ids = [row.get("id") if isinstance(row, dict) else None for row in payload["items"]]
+    if any(type(value) is not int or value <= 0 for value in ids) or len(ids) != len(set(ids)):
+        raise ValueError("Invalid or duplicate court IDs")
+    relations = set()
+    for link in payload["links"]:
+        if not isinstance(link, dict) or link.get("rel") not in {"self", "next", "prev", "previous", "first", "last"} or not isinstance(link.get("href"), str):
             raise ValueError("Invalid court pagination link")
-        if not any(link.get("rel") == "next" for link in payload["links"]):
-            return divisions
-        if not payload["items"]:
-            raise ValueError("Empty common-court page before next link")
-        page += 1
+        if link["rel"] in relations:
+            raise ValueError("Duplicate court pagination relation")
+        relations.add(link["rel"])
+    if len(ids) > 100 or "self" not in relations or (not ids and "next" in relations):
+        raise ValueError("Invalid common-court pagination")
+    return payload

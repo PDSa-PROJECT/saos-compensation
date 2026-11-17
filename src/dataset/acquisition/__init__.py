@@ -1,1 +1,1 @@
-"""SAOS acquisition and source metadata."""
+"""Raw SAOS download settings and durable acquisition."""

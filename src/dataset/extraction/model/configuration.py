@@ -5,29 +5,12 @@ import math
 import re
 from pathlib import Path
 
-import yaml
+from ...configuration import read_config
 
 from ...embeddings.target_matching import validate_settings
 from .prompts import DEFAULTS, METADATA_FIELDS
 
 ROOT = Path(__file__).resolve().parents[4]
-
-
-def read_config(path):
-    """
-    Read a YAML mapping and reject other configuration structures.
-
-    args:
-        path: Path to the relevant input or output file.
-
-    returns:
-        Parsed configuration mapping.
-    """
-    value = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(value, dict):
-        raise ValueError(f"Configuration must be a mapping: {path}")
-    return value
-
 
 
 def load_config(directory=None, overrides=None):
@@ -36,20 +19,20 @@ def load_config(directory=None, overrides=None):
 
     args:
         directory: Input or output directory for this operation.
-        overrides: Explicit acquisition overrides.
+        overrides: Explicit local processing overrides.
 
     returns:
         Effective validated configuration.
     """
-    from ...acquisition.settings import search_settings
+    from ...processing.settings import validate_settings as validate_processing_settings
 
     directory = (
         Path(directory)
         if directory is not None
-        else ROOT / "configs" / "dataset" / "acquisition"
+        else ROOT / "configs" / "dataset" / "processing"
     )
     basal = read_config(directory / "basal.yaml")
-    api = read_config(directory / "api.yaml")
+    processing = read_config(directory / "process.yaml")
     features = read_config(directory / "features.yaml")
     targets = read_config(directory / "targets.yaml")
     if set(targets) != {"embedding", "patterns"}:
@@ -88,8 +71,8 @@ def load_config(directory=None, overrides=None):
     if "damage" not in fields:
         raise ValueError("text_fields must include damage")
     validate_settings(embedding, patterns)
-    api.update(overrides or {})
-    search_settings(api)
+    processing.update(overrides or {})
+    validate_processing_settings(processing)
     required = {
         "model",
         "device",
@@ -123,7 +106,7 @@ def load_config(directory=None, overrides=None):
             raise ValueError(f"Invalid probability threshold: {key}")
     config = {
         **copy.deepcopy(DEFAULTS),
-        "api": api,
+        "processing": processing,
         "embedding": embedding,
         "target_patterns": patterns,
         "fields": fields,

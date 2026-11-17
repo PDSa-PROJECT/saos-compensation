@@ -2,17 +2,32 @@
 
 [Back to README](../README.md)
 
-## Output and admission
+## Raw output
 
 ```text
 <download_path>/
 ├── checkpoint.json
+├── common_courts/
+│   └── 00000000.json       # full original court API response per page
+└── judgments/
+    └── 00000000.json       # full original judgment API response per page
+```
+
+Responses retain their complete JSON structure, unknown fields and HTML text. These are API-page files, not extracted case records. No case is discarded for missing compensation evidence during downloading. Court pages are downloaded first for later local metadata joins.
+
+## Processed output and admission
+
+```text
+<output_path>/
+├── checkpoint.json
 └── <SAOS_ID>/
     ├── record.json         # selected predictor values only
     ├── award.json          # total and valid only
-    ├── source.txt          # debug=true only
-    └── model_calls.json    # debug=true only
+    ├── source.txt          # processing debug=true only
+    └── model_calls.json    # processing debug=true only
 ```
+
+Processing selects common-court sentences containing compensation terminology and numeric PLN evidence, deduplicates stable SAOS IDs, joins saved court metadata and validates admitted judgments. Its output and checkpoint are independent of the raw directory. Extraction/admission rules are unchanged by the stage split.
 
 Before monetary target selection, every full sentence is compared with the 12 `judgment-denial` patterns, including sentences without PLN amounts or role keywords. A cosine match strictly above the configured threshold (default 0.7) establishes a confirmed zero-valued target only when it also exceeds the best procedural-cost match for that sentence. Cost matches win exact ties. Monetary award parsing is skipped, while factual predictors and metadata are extracted and validated normally. If no denial matches, monetary selection proceeds normally.
 
@@ -24,8 +39,10 @@ Debug adds only `source.txt` and `model_calls.json`; evidence and confidence dia
 
 ## Resume and storage limits
 
-Restart the same command after interruption. `checkpoint.json` pins the original date bounds, extraction configuration and locality snapshot hash, and records the next page/item. Saved records are recognized without repeating extraction. Temporary `<SAOS_ID>/pending/` state preserves source/configuration and completed model decisions even with debug disabled; it is removed after acceptance or rejection.
+Restart the same stage command after interruption. Raw `checkpoint.json` pins the dataset ID and original date bounds and records independent court/judgment page cursors. Each raw page becomes durable before its cursor advances. A saved page left behind by an interrupted checkpoint write is reused without another HTTP request. Debug, timeout, size and page limits may change; increasing the page limit continues downloading. Changing the age range requires a new download path. A completed download performs no more requests.
 
-Dates, models, patterns, questions and extraction settings must remain compatible with the checkpoint. Use a new output path for a changed experiment or an older extractor version. The current extractor version is **31**. Debug, timeout, size and page limits may change during a resume; increasing the page limit continues acquisition. A fully completed checkpoint performs no further acquisition. Run one process per output directory.
+The processing checkpoint pins extraction configuration, raw content signature, locality snapshot hash and the next page/item. Final case files become durable before processing advances. Saved records are recognized without repeated extraction. Temporary `<SAOS_ID>/pending/` state retains source/configuration and completed model decisions independently of debug; it is removed after acceptance or rejection. Rejecting a case never deletes its raw input.
 
-`max_gib` includes existing output, debug files, pending state and atomic temporary writes across resumptions. A refused write stops the run with a resumable checkpoint; increase the limit to continue. A page limit follows dump order and is not random sampling.
+Finish raw downloading before processing the saved snapshot. A page-limited raw dataset can be processed even if more pages exist remotely. Extending or editing raw input requires a new processing output path. Models, patterns and questions must remain compatible with the processing checkpoint; changed experiments or legacy combined-pipeline artifacts require a separate destination. The extractor remains version **31**. Processing debug, timeout and size limits may change during a resume. Run one process per output directory.
+
+Each stage enforces its own `max_gib` against all files in its output directory, including existing files and atomic temporary writes; processing also counts pending/debug files. A refused write leaves resumable progress; increase the corresponding limit to continue. Existing artifacts are preserved, and neither stage adopts an unrelated or legacy checkpoint. Input/output directories must not overlap. Model caches stay outside size-limited processed output. A page limit follows dump order and is not random sampling.

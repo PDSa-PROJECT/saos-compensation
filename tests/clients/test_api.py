@@ -4,7 +4,6 @@ import json
 import pytest
 import requests
 
-from dataset.acquisition.download import search_pages
 from dataset.acquisition.settings import search_settings
 from dataset.clients import api
 
@@ -46,53 +45,6 @@ def search_response(params, identifiers, more=False):
             else []
         ),
     }
-
-
-@pytest.mark.parametrize("limit, expected", [(0, [0, 1, 2]), (1, [0]), (2, [0, 1])])
-def test_pagination_uses_next_without_result_count(
-    monkeypatch,
-    tmp_path,
-    limit,
-    expected,
-):
-    """
-    Verify pagination uses next without result count.
-
-    args:
-        monkeypatch: Scoped replacements for the test.
-        tmp_path: Isolated temporary directory.
-        limit: Maximum batch or fragment size.
-        expected: Expected result.
-
-    returns:
-        None.
-    """
-    pages = []
-
-    def fetch(url, *args):
-        """
-        Provide the fetch behavior used by this operation.
-
-        args:
-            url: Resource URL.
-            args: Input for this operation.
-
-        returns:
-            Result of this operation.
-        """
-        from urllib.parse import parse_qs, urlparse
-
-        page = int(parse_qs(urlparse(url).query)["pageNumber"][0])
-        pages.append(page)
-        _, _, params = search_settings(CONFIG)
-        params["pageNumber"] = page
-        return search_response(params, [page + 1], page < 2)
-
-    monkeypatch.setattr(api, "fetch_json", fetch)
-    assert len(list(search_pages({**CONFIG, "max_pages": limit}, tmp_path))) == len(
-        expected
-    )
-    assert pages == expected
 
 
 @pytest.mark.parametrize("defect", ["query", "duplicate", "links", "id", "empty_next"])
@@ -248,104 +200,30 @@ def test_http_timeout_is_not_retried(monkeypatch):
     assert len(calls) == 1
 
 
-def test_court_dump_joins_divisions_across_pages(monkeypatch):
-    """
-    Verify court dump joins divisions across pages.
+@pytest.mark.parametrize("defect", [None, "ids", "duplicate", "links", "empty_next"])
+def test_court_dump_validates_transport_without_processing(monkeypatch, defect):
+    """Retain court payloads while rejecting unsafe pagination and identifiers.
 
     args:
-        monkeypatch: Scoped replacements for the test.
+        monkeypatch: Scoped HTTP boundary replacement.
+        defect: Malformed transport field, or None for a valid response.
 
     returns:
         None.
     """
-    pages = []
-
-    def fetch(url, directory, session, timeout):
-        """
-        Provide the fetch behavior used by this operation.
-
-        args:
-            url: Resource URL.
-            directory: Input or output directory for this operation.
-            session: Reusable HTTP session, when supplied.
-            timeout: Connection/read timeout in seconds.
-
-        returns:
-            Result of this operation.
-        """
-        from urllib.parse import parse_qs, urlparse
-
-        page = int(parse_qs(urlparse(url).query)["pageNumber"][0])
-        pages.append(page)
-        assert timeout == 7
-        return {
-            "items": [
-                {
-                    "id": page + 1,
-                    "name": f"Sąd {page}",
-                    "type": "REGIONAL",
-                    "divisions": [{"id": 10 + page, "name": "Cywilny"}],
-                }
-            ],
-            "links": [{"rel": "next"}] if page == 0 else [],
-        }
-
-    monkeypatch.setattr(api, "fetch_json", fetch)
-    divisions = api.load_divisions(object(), timeout=7)
-    assert pages == [0, 1]
-    assert divisions[11]["court"] == {"id": 2, "name": "Sąd 1", "type": "REGIONAL"}
-
-
-def test_court_dump_rejects_duplicate_divisions(monkeypatch):
-    """
-    Verify court dump rejects duplicate divisions.
-
-    args:
-        monkeypatch: Scoped replacements for the test.
-
-    returns:
-        None.
-    """
-    payload = {
-        "items": [
-            {
-                "id": 1,
-                "name": "Sąd",
-                "type": "REGIONAL",
-                "divisions": [
-                    {"id": 10, "name": "Cywilny"},
-                    {"id": 10, "name": "Karny"},
-                ],
-            }
-        ],
-        "links": [],
-    }
-    monkeypatch.setattr(api, "fetch_json", lambda *args: payload)
-    with pytest.raises(ValueError, match="duplicate division"):
-        api.load_divisions(object())
-
-
-@pytest.mark.parametrize(
-    "court",
-    [
-        None,
-        {"id": 1, "name": "Sąd", "type": "REGIONAL"},
-        {"id": True, "name": "Sąd", "type": "REGIONAL", "divisions": []},
-    ],
-)
-def test_malformed_court_dump_is_rejected(monkeypatch, court):
-    """
-    Verify malformed court dump is rejected.
-
-    args:
-        monkeypatch: Scoped replacements for the test.
-        court: Input for this operation.
-
-    returns:
-        None.
-    """
-    monkeypatch.setattr(
-        api, "fetch_json", lambda *args: {"items": [court], "links": []}
-    )
-    with pytest.raises(ValueError, match="Invalid court"):
-        api.load_divisions(object())
+    payload = {"items": [{"id": 1, "unknown": [True]}], "links": [{"rel": "self", "href": "page"}]}
+    if defect == "ids":
+        payload["items"][0]["id"] = True
+    elif defect == "duplicate":
+        payload["items"] *= 2
+    elif defect == "links":
+        payload["links"] *= 2
+    elif defect == "empty_next":
+        payload["items"] = []
+        payload["links"].append({"rel": "next", "href": "next"})
+    monkeypatch.setattr(api, "fetch_json", lambda *args, **kwargs: payload)
+    if defect:
+        with pytest.raises(ValueError):
+            api.search_courts(0)
+    else:
+        assert api.search_courts(0) is payload

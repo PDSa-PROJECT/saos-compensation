@@ -23,16 +23,16 @@ def project_root():
 
 @pytest.fixture
 def config_directory(tmp_path, project_root):
-    """Copy acquisition settings into a fresh directory for each test.
+    """Copy processing settings into a fresh directory for each test.
 
     args:
         tmp_path: Isolated test directory.
-        project_root: Repository root containing acquisition defaults.
+        project_root: Repository root containing processing defaults.
 
     returns:
-        Directory containing editable acquisition YAML files.
+        Directory containing editable processing YAML files.
     """
-    shutil.copytree(project_root / "configs/dataset/acquisition", tmp_path, dirs_exist_ok=True)
+    shutil.copytree(project_root / "configs/dataset/processing", tmp_path, dirs_exist_ok=True)
     return tmp_path
 
 

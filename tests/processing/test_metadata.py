@@ -1,7 +1,7 @@
 
 import pytest
 
-from dataset.acquisition.metadata import add_metadata_features
+from dataset.processing.metadata import add_metadata_features
 
 
 @pytest.mark.parametrize(
