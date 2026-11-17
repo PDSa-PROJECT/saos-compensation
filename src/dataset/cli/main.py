@@ -17,7 +17,7 @@ def parse_arguments(arguments=None):
     """
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="Explicit CLI options override acquisition/api.yaml; use process-data for extraction.",
+        epilog="Explicit CLI options override environment, .env and YAML; use process-data for extraction.",
     )
     parser.add_argument(
         "--config-dir",

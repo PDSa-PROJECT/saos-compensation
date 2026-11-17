@@ -4,7 +4,36 @@ from calendar import monthrange
 from datetime import date
 from pathlib import Path
 
+from pydantic import Field, field_validator
+
+from ..settings import FiniteNumber, NonblankString, Settings, RuntimeSettings
 from ..configuration import ROOT, read_config, validate_path
+
+
+class AcquisitionSettings(Settings):
+    """Acquisition values after explicit CLI overrides have been applied."""
+
+    max_age_years: int = Field(gt=0)
+    max_pages: int = Field(ge=0)
+    max_gib: FiniteNumber = Field(ge=0)
+    debug: bool
+    download_path: NonblankString
+    timeout: FiniteNumber = Field(gt=0)
+
+    @field_validator("download_path")
+    @classmethod
+    def output_path(cls, value):
+        """Validate filesystem output paths without restricting their location.
+
+        args:
+            cls: Acquisition settings class.
+            value: Nonblank output path.
+
+        returns:
+            The unchanged filesystem path.
+        """
+        validate_path(value, "download_path")
+        return value
 
 
 def search_settings(config, today=None):
@@ -18,31 +47,8 @@ def search_settings(config, today=None):
     returns:
         Start date, end date and effective query parameters.
     """
-    if not isinstance(config, dict) or set(config) != {
-        "max_age_years",
-        "max_pages",
-        "max_gib",
-        "debug",
-        "download_path",
-        "timeout",
-    }:
-        raise ValueError(
-            "api.yaml requires max_age_years, max_pages, max_gib, debug, download_path and timeout"
-        )
-    if type(config["max_gib"]) not in (int, float) or not 0 <= config[
-        "max_gib"
-    ] < float("inf"):
-        raise ValueError("max_gib must be a nonnegative finite number")
-    if type(config["timeout"]) not in (int, float) or not 0 < config["timeout"] < float(
-        "inf"
-    ):
-        raise ValueError("timeout must be a positive finite number")
-    if type(config["debug"]) is not bool:
-        raise ValueError("debug must be true or false")
-    years, limit = config["max_age_years"], config["max_pages"]
-    if type(years) is not int or years <= 0 or type(limit) is not int or limit < 0:
-        raise ValueError("max_age_years must be positive and max_pages nonnegative")
-    validate_path(config["download_path"], "download_path")
+    settings = AcquisitionSettings.from_mapping(config)
+    years = settings.max_age_years
     end = today or date.today()
     if years >= end.year:
         raise ValueError("max_age_years exceeds the supported date range")
@@ -70,7 +76,12 @@ def load_config(directory=None, overrides=None):
         Validated download settings without model configuration.
     """
     directory = Path(directory) if directory is not None else ROOT / "configs/dataset/acquisition"
-    settings = read_config(directory / "api.yaml")
-    settings.update(overrides or {})
+    overrides = overrides or {}
+    runtime = RuntimeSettings(**{
+        "acquisition_" + key: value for key, value in overrides.items()
+        if "acquisition_" + key in RuntimeSettings.model_fields
+    })
+    settings = runtime.merge("acquisition", read_config(directory / "api.yaml"))
+    settings.update(overrides)
     search_settings(settings)
     return settings

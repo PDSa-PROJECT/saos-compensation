@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from ..transforms.rules import FIELD_RULES, TEXT_FIELDS
+from ..settings import PreprocessingSettings
 
 
 def validate_config(settings):
@@ -16,17 +16,7 @@ def validate_config(settings):
     returns:
         Independent validated feature selection.
     """
-    if not isinstance(settings, dict) or set(settings) != {"feature_fields"}:
-        raise ValueError("Model input configuration accepts only feature_fields")
-    fields = settings["feature_fields"]
-    if not isinstance(fields, list) or not fields or any(not isinstance(field, str) for field in fields):
-        raise ValueError("feature_fields must be a nonempty list of names")
-    if len(set(fields)) != len(fields):
-        raise ValueError("feature_fields cannot contain duplicates")
-    for field in fields:
-        if field not in FIELD_RULES and field not in TEXT_FIELDS:
-            raise ValueError(f"Unsupported predictor: {field}")
-    return {"feature_fields": list(fields)}
+    return PreprocessingSettings.from_mapping(settings).model_dump()
 
 
 def validate_scaling(settings):

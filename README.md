@@ -130,7 +130,7 @@ For `process-data`, debug adds `source.txt` and `model_calls.json` to retained c
 
 Processing checkpoints and temporary `pending/` state preserve progress and completed model decisions in both modes. Pending state is removed after acceptance or rejection. See [output and resume details](docs/acquisition.md).
 
-Both commands support `-h`/`--help`. Explicit arguments override only their corresponding YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
+Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, root `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
 
 ## Documentation
 

@@ -39,3 +39,7 @@ The current models are:
 Missing model files download automatically from Hugging Face and are reused from `basal_weights/` and `embedding_weights/`. Keep these caches outside a size-limited output directory. Locality population enrichment also downloads and caches a GUGiK snapshot under `tmp/gugik/`.
 
 The default configuration selects `mps` in **both** `configs/dataset/processing/basal.yaml` and `configs/dataset/processing/targets.yaml`. Set both devices to `cpu` or `cuda` for another runtime. Unavailable accelerators fail before inference starts; raw downloading does not check devices.
+
+## Settings validation
+
+Precedence: explicit CLI → process environment → repository-root `.env` → YAML → runtime defaults. See [`.env.example`](../.env.example). Acquisition and processing have independent runtime keys. Model/device overrides apply only to processing. A changed `EMBEDDING_MODEL` requires `EMBEDDING_REVISION`. Domain schemas retain strict explicit-input validation.
