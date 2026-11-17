@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Opened PR #68 from fix/extraction-amount-contexts to split-download-processing (#67), following documentation review #66. All three branches include merged main/settings #64 and preserve separate review scopes; no PR was merged. Combined validation: 547 passed, five skipped; Ruff passed. GitHub checks are pending.
+
 Integrated the filtered download/split pipeline and merged typed settings into extraction fixes. The extraction PR targets split-download-processing; the underlying chain remains main → documentation review → split pipeline → extraction fixes.
 
 Completed general extraction guards and metadata support: court_type is read from SAOS, unchanged appeals are excluded, conflicting or unmatched operative components cannot produce partial totals, and explicit additional prior-payment components cannot replace an unknown combined total. Similarity now evaluates non-target patterns before computing any judgment comparisons for remaining windows. Added cross-construction checks for denial, varied amounts/currencies, interest, procedural expenses, public parties and experts. Validation: 535 tests passed, five optional checks skipped; Ruff and whitespace checks passed. Saved-case and model replay limits are documented separately.
@@ -40,7 +42,7 @@ Added docs/dataset-correctness-review.md, a Polish review of 17 saved tmp/test j
 
 Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests), PR #61 (Conventional Commits and PR-title validation), then PR #63 for documentation work. README.md retains the approved overview, roadmap, actual repository tree, short package description, original setup/download/arguments and contribution link. Technical sections moved verbatim to docs/pipeline.md, docs/configuration.md, docs/acquisition.md, docs/embeddings.md, docs/preprocessing.md and docs/development.md, with README links; Current limitations and remaining work was removed as requested. Typed settings from merged PR #64 are now integrated. No PR was merged and protection settings are unchanged.
 
-Draft PR #64 separates YAML experiment settings from root .env/runtime settings. Precedence is CLI > process environment > .env > YAML > built-in defaults; supported keys are in .env.example. Model overrides require an explicit revision for a changed embedding model. Added tests are reduced to five basic checks; the pre-existing tests are retained. Validation: 499 passed, four skipped; Ruff passed. No acquisition or inference was run.
+Merged PR #64 separates YAML experiment settings from root .env/runtime settings. Precedence is CLI > process environment > .env > YAML > built-in defaults; supported keys are in .env.example. Model overrides require an explicit revision for a changed embedding model. Added tests are reduced to five basic checks; the pre-existing tests are retained. Validation: 499 passed, four skipped; Ruff passed. No acquisition or inference was run.
 
 Repository workflow improvements form native GitHub stack #62 in creation order: PR #60 (Python lint/tests), PR #61 (Conventional Commits and PR-title validation), then PR #63 for documentation work, with typed settings as the next layer. README.md retains the approved overview, roadmap, actual repository tree, short package description, original setup/download/arguments and contribution link. Technical sections moved verbatim to docs/pipeline.md, docs/configuration.md, docs/acquisition.md, docs/embeddings.md, docs/preprocessing.md and docs/development.md, with README links; Current limitations and remaining work was removed as requested. No PR was merged and protection settings are unchanged.
 
@@ -82,8 +84,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-10: Integrated feature/model-preprocessing as the base of target-search for stacked review. Retained both implementations and reconciled the status log without changing version-28 target behavior. Full offline validation passed: 474 tests, three skipped. No source records or checkpoints were rewritten.
 
 - 2026-11-10: Integrated target-search into the structural acquisition layer, preserving version-28 matcher behavior while adapting its growth tests to installed dataset imports and the component test layout. Retained packaging compatibility, clients/storage separation and dependency injection. Full offline validation passed: 487 tests, four skipped. Source artifacts are unchanged.
 
@@ -182,3 +182,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-17: Added broad configurable SAOS search to raw acquisition, preserving full source data, search snippets, shared session/timeouts, atomic pages, independent court metadata and unchanged local processing. Added CLI override and regression tests for query acknowledgement, full-text failures, safe resume and legacy checkpoint preservation. Live single-judgment search/detail smoke passed. Full validation: 535 passed, five optional checks skipped; Ruff passed.
 
 - 2026-11-17: Integrated the updated split-download-processing branch into extraction fixes without rewriting history. Validation: 547 passed, five optional checks skipped; Ruff passed. Preserved five-word amount contexts, exclusion-first routing, principal aggregation and prior-payment confirmation while replacing duplicate settings validation with the typed schema from main.
+
+- 2026-11-17: Published the reconciled #66 -> #67 -> #68 chain. PR #68 targets split-download-processing and is assigned to Marcin-Brzykcy; #67 documents broad search and full-source acquisition. Confirmed main ancestry through every layer, clean worktree and focused PR diffs. Combined suite: 547 passed, five optional checks skipped; Ruff passed. GitHub CI/review is monitored separately; no landing requested.
