@@ -59,6 +59,17 @@ DEFAULTS = {
             "Jeśli brak odpowiedzi, wybierz not stated.",
             "field_suffix": "",
         },
+        "prior_payment": {
+            "instructions": "Czy wskazana oceniana_kwota jest kwotą świadczenia głównego faktycznie "
+            "wypłaconą przed bieżącym wyrokiem osobom wskazanym jako beneficjenci? "
+            "Oceniaj tylko tę konkretną liczbę w podanym fragmencie, nawet jeżeli są inne kwoty. "
+            "Nie uznawaj za wypłatę żądania, kwoty dopiero zasądzonej, samego przyznania "
+            "świadczenia bez potwierdzenia zapłaty, pozostałego salda, odsetek, kosztów "
+            "ani zapłaty na rzecz innej osoby. Przy wypłacie na osobę musi być jawna "
+            "liczba uprawnionych, a oceniana_kwota ma oznaczać ich łączne wcześniejsze "
+            "świadczenie. Nie sumuj ani nie przeliczaj kwot. Jeśli nie można tego "
+            "potwierdzić, odpowiedz nie."
+        },
         "instance": {
             "instructions": "W której instancji zapadł ten wyrok? Wymagaj informacji o etapie "
             "postępowania. Nie wnioskuj wyłącznie z poziomu ani nazwy sądu. Przy "

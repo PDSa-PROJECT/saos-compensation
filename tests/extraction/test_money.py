@@ -96,3 +96,26 @@ def test_compound_amounts_require_descending_units(text):
     """
     with pytest.raises(ValueError, match="largest to smallest"):
         amount_in_pln(MONEY.fullmatch(text))
+
+
+@pytest.mark.parametrize("source,expected", [
+    ("40.000 (czterdzieści tysięcy złotych)", "40000"),
+    ("4. 000 złotych (cztery tysiące)", "4000"),
+    ("14000 (czternaście tysięcy) złotych", "14000"),
+])
+def test_amount_spelling_preserves_explicit_pln(source, expected):
+    """Read the same numeric principal when PLN occurs inside its written-out form.
+
+    args:
+        source: Numeric amount and explicit source currency.
+        expected: Exact PLN value.
+
+    returns:
+        None.
+    """
+    from dataset.extraction.source.text import MONEY, amount_in_pln
+
+    match = MONEY.search(source)
+    assert match is not None
+    assert amount_in_pln(match) == expected
+

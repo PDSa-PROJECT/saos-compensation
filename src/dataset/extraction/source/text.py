@@ -109,9 +109,7 @@ MONEY = re.compile(
     """
     + AMOUNT_NUMBER
     + rf"(?:\s*{AMOUNT_SCALE}(?:\s+{AMOUNT_NUMBER}(?:\s*{AMOUNT_SCALE})?)*)?"
-    + r")\s*(?:\([^()\n]{1,200}\)\s*)?"
-    + PLN_UNIT
-    + r"\b",
+    + rf")\s*(?:(?:\([^()\n]{{1,200}}\)\s*)?{PLN_UNIT}\b|\([^()\n]{{1,200}}{PLN_UNIT}\b\s*\))",
     re.IGNORECASE | re.VERBOSE,
 )
 

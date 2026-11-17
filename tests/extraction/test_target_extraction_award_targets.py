@@ -57,67 +57,47 @@ def test_missing_judgment_never_reaches_basal(monkeypatch):
     assert result["target_matches"]["judgment"] is None
 
 
-@pytest.mark.parametrize(
-    ("value", "probability", "expected"),
-    [
-        ("700 zł", 0.9, 700),
-        ("1,5 tys. zł", 0.9, 1500),
-        ("700,49 zł", 0.9, 700),
-        ("700,50 zł", 0.9, 701),
-        ("700 zł", 0.5, 0),
-        ("700 zł", None, 0),
-        (None, 0.9, 0),
-        ("700 EUR", 0.9, 0),
-    ],
-)
-def test_prior_payment_resolves_only_selected_principal_as_integer(
-    monkeypatch,
-    value,
-    probability,
-    expected,
-):
-    """
-    Keep prior payments numeric and separate from the remaining amount to award.
+@pytest.mark.parametrize("value,probability,expected", [
+    ("700 zł", 0.9, 700), ("1,5 tys. zł", 0.9, 1500),
+    ("700,49 zł", 0.9, 700), ("700,50 zł", 0.9, 701),
+    ("9.000 zł", 0.9, 9000), ("700 zł", 0.5, 0),
+    ("700 zł", None, 0),
+])
+def test_prior_payment_resolves_only_selected_principal_as_integer(monkeypatch, value, probability, expected):
+    """Ask about the source-backed amount's role without extracting another number.
 
     args:
         monkeypatch: Scoped model replacement.
-        value: Extracted source amount or missing value.
-        probability: Model confidence in the selected amount.
-        expected: Whole-PLN feature value.
+        value: Source-backed monetary occurrence.
+        probability: Confirmation score for its earlier-payment role.
+        expected: Integer feature value.
 
     returns:
         None.
     """
+    source = f"Ubezpieczyciel wypłacił {value}, pozostało do zapłaty 6300 zł."
 
     async def ask(server, state, questions, config):
-        """
-        Return an earlier-payment span without selecting the outstanding balance.
+        """Confirm the chosen amount without returning currency or a free-text span.
 
         args:
-            server: Unused inference server.
-            state: Earlier-payment sentence.
-            questions: Requested feature extraction.
-            config: Effective settings.
+            server: Unused model server.
+            state: Amount and source context.
+            questions: Earlier-payment role question.
+            config: Effective configuration.
 
         returns:
-            Controlled source extraction.
+            Controlled role confirmation.
         """
-        assert set(questions) == {"prior_payment"}
-        return {
-            "prior_payment": {
-                "data": {"amount": value},
-                "fields": {"amount": {"confidence": probability}},
-            }
-        }
+        assert questions["prior_payment"]["type"] == "noul"
+        assert state["fragment"] == source
+        assert state["oceniana_kwota"] != "6300"
+        return {"prior_payment": {"noul": probability}}
 
     monkeypatch.setattr(decisions, "ask", ask)
-    result = asyncio.run(
-        amounts.extract_prior_payment(
-            None,
-            {"text": "Wypłacono 700 zł, pozostaje 6300 zł."},
-            config_module.load_config(),
-        )
-    )
+    start = source.index(value)
+    match = {"text": source, "start": 0, "end": len(source), "amount_start": start, "amount_end": start+len(value)}
+    result = asyncio.run(amounts.extract_prior_payment(None, match, config_module.load_config()))
     assert type(result) is int
     assert result == expected
 
