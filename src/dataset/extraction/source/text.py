@@ -78,6 +78,10 @@ def extract_text(html):
     return "\n".join(line for line in lines if line)
 
 
+EVIDENCE_MARKER = re.compile(
+    r"^(?:(?:bezsporne|okoliczność bezsporna)\s*[.!]?$|(?:dowód|dowody)\s*:)",
+    re.IGNORECASE,
+)
 REASONS = re.compile(r"^UZASADNIENIE\s*$", re.IGNORECASE | re.MULTILINE)
 PLN_UNIT = r"(?:PLN|zł|złot(?:y|ego|emu|ym|e|ych|ymi)|złotówk(?:a|i|ę|ą|o|om|ami|ach)|złotówek|złotówce)"
 CURRENCY = re.compile(rf"\b{PLN_UNIT}\b", re.IGNORECASE)

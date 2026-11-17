@@ -23,7 +23,15 @@ Poniższe rozwiązania są propozycjami. Nie zostały w ramach tego dokumentu wd
 7. Zmiany progów sprawdzać pojedynczo. Nie obniżać globalnie progów Basala w celu odzyskania wcześniejszych wypłat: mogłoby to jednocześnie przepuścić więcej kosztów i nieistotnych opisów. Najpierw poprawić filtr i format odpowiedzi.
 
 **podstawowy fix**
-najpierw szukamy gru
+najpierw szukamy grup innych niz nasz target
+- case denial potwierdzony - sprawe oddalono
+- inne przypadki: podnosimy prog confidence 0.7 -> 0.85
+- zdania z kwotami dzielimy na części, tak zeby zlapac otoczenie tam gdzie występuje kwota (5 słów przed i 5 po kwocie)
+- badamy podobienstwo tego wycinka, nie calego zdania do konkretnych klas i klasyfikujemy te wycinki
+- wycinki mogą się zazębiać
+- jeśli dany wycinek (otoczenie kwoty) został przyporządkowany do konkretnej grupy, nie sprawdzamy go juz do targetu
+
+- nalezy zadać basalowi dokladniejsze pytania, ktore pozwolą rozroznic 
 
 ## Niepoprawne lub niepełne przypadki
 
@@ -33,7 +41,7 @@ najpierw szukamy gru
 
 **Przyczyna:** jako target wybrano rozważania o odpowiedniej łącznej wysokości zadośćuczynienia przed odjęciem wcześniejszej wypłaty. Prawidłową klauzulę z sentencji zakwalifikowano jako odsetki. Basal zwrócił dla wcześniejszej wypłaty zbyt szeroki fragment o niskiej pewności.
 
-**Proponowane rozwiązanie:** mamy juz w targets.yaml baze do rozpoznawania prior payment.
+**Proponowane rozwiązanie:** podstawowy fix
 
 ### 256991 — I C 1227/15
 
@@ -41,7 +49,7 @@ najpierw szukamy gru
 
 **Przyczyna:** wybrano teoretyczną kwotę zadośćuczynienia jednej osoby z uzasadnienia. Nie zsumowano odrębnych punktów sentencji ani nie uwzględniono wszystkich odbiorczyń. Do jednego targetu przypisano zbyt wąski opis szkody.
 
-**Proponowane rozwiązanie:** najpierw przejść po punktach sentencji. Odrzucić punkty o kosztach i wyodrębnić kwoty po „zasądza ... na rzecz ...”. W tym prostym przypadku zsumować trzy świadczenia i policzyć ich jawne odbiorczynie. W pytaniu o szkodę wskazać wszystkie trzy osoby. Jeżeli nie uda się zebrać zgodnych cech, nie akceptować samej sumy z opisem jednej osoby.
+**Proponowane rozwiązanie:** suma jest ok. liczba beneficjentek się nie zgadza. czy odpowiada na to basal? jeśli tak to trzeba zadać mu dokładniejsze pytanie. jeśli nie, liczba beneficjentów do usunięcia (lepiej nie usuwajmy)
 
 ### 257024 — I C 1710/14
 
@@ -49,7 +57,7 @@ najpierw szukamy gru
 
 **Przyczyna:** do targetu trafiło wynagrodzenie prawnika opisane przy rozliczaniu kosztów. Słowa w wybranym prefiksie nie dopuściły odpowiedniej kategorii wykluczającej. Basal uznał marker dowodowy za opis szkody z trafnością około 0,670.
 
-**Proponowane rozwiązanie:** przed wyborem kwoty głównej odfiltrować zwroty o wynagrodzeniu prawnika i zwrocie kosztów procesu, z uwzględnieniem wariantów pisowni. Pierwszeństwo dać 20 500 zł z sentencji. Odrzucać samodzielne „Bezsporne.” przed oceną cech przez Basala. W pytaniu o szkodę wymagać zdania opisującego faktyczny uszczerbek, a nie oznaczenia dowodu. Do czasu uzyskania takiego opisu odrzucić rekord, również przy włączonym debug.
+**Proponowane rozwiązanie:** fix podstawowy + rozszerz baze słów/ zdań + wyzsze progi (chyba juz są)
 
 ### 260046 — I ACa 504/16
 
@@ -57,7 +65,8 @@ najpierw szukamy gru
 
 **Przyczyna:** zdanie zawierające „tytułem zwrotu kosztów procesu w instancji odwoławczej” wygrało jako `judgment`, mimo dopuszczenia kategorii kosztowej. Sam wynik similarity nie zapewnił poprawnej kategorii.
 
-**Proponowane rozwiązanie:** zwroty „tytułem zwrotu kosztów procesu” i „kosztów postępowania apelacyjnego” potraktować jako twardy filtr przed wyborem targetu. „Oddala apelację” nie może oznaczać ani zera, ani zasądzenia kosztów jako odszkodowania. Najprostszy bezpieczny wariant to odrzucić tę apelację, jeśli na obecnym etapie nie odczytujemy jednoznacznie utrzymanych świadczeń z opisu zaskarżonego wyroku.
+**Proponowane rozwiązanie:** fix podstawowy
+
 
 ### 260063 — I C 172/15
 
@@ -65,8 +74,8 @@ najpierw szukamy gru
 
 **Przyczyna:** wybrano zdanie o rozszerzeniu żądania z 6000 zł o kolejne 8000 zł. Parser prawidłowo odmówił uznania takiego zdania z dwiema kwotami za jednoznaczny target. Błąd wystąpił wcześniej, przy filtracji kandydatów.
 
-**Proponowane rozwiązanie:** przed kategorią `judgment` odfiltrować sformułowania „powód zmienił żądanie”, „wniósł o zasądzenie” i „rozszerzył żądanie”. Poszerzyć wzorce `request` o te konstrukcje. Najpierw sprawdzić prostą kwotę 14 000 zł w sentencji. Zachować odrzucenie fragmentu z dwiema kwotami — nie naprawiać tego przez zgadywanie, którą wybrać.
-
+**Proponowane rozwiązanie:** Poszerzyć wzorce `request` o te konstrukcje. Najpierw sprawdzić prostą kwotę 14 000 zł w sentencji. Zachować odrzucenie fragmentu z dwiema kwotami — nie naprawiać tego przez zgadywanie, którą wybrać.
+zgadza sie
 ### 260384 — I ACa 662/16
 
 **Opis:** zapisano `total=35000`. Utrzymane świadczenie wynosi **36 800 zł = 32 000 zł zadośćuczynienia + 4800 zł odszkodowania**. W źródle jest potwierdzona wcześniejsza wypłata zadośćuczynienia **3000 zł**, a w rekordzie `prior_payment=0`.
@@ -74,6 +83,7 @@ najpierw szukamy gru
 **Przyczyna:** wybrano zdanie o adekwatnej wysokości krzywdy przed uwzględnieniem wcześniejszej wypłaty. Nie wybrano opisu kwoty rzeczywiście zasądzonej. Fragment o wcześniejszej wypłacie nie przeszedł ekstrakcji Basala.
 
 **Proponowane rozwiązanie:** obniżyć priorytet opisów „adekwatną kwotą będzie” i „odpowiednie zadośćuczynienie wynosi”. Preferować konstrukcje „zasądził”, „zasądzając” i „należało zasądzić”, z kwotą i odbiorcą. W tym źródle istnieje jawne podsumowanie 36 800 zł, więc nie trzeba budować rozbudowanego rozliczenia. Jeśli podsumowania nie da się bezpiecznie wskazać, odrzucić przypadek. Wcześniejszą wypłatę wyodrębnić jako liczbę z walutą.
+niech tak będzie. jednak musimy pozostawić konkstrukcje zdaniowe. podstawowy fix powinien zaradzić
 
 ### 275542 — II Ca 362/16
 
@@ -81,7 +91,7 @@ najpierw szukamy gru
 
 **Przyczyna:** w uzasadnieniu opisano kilka osób z tej samej rodziny. Pytanie o poszkodowanego nie ograniczyło odpowiedzi do właściwego uczestnika. Wystarczyło semantycznie poprawne zdanie o szkodzie, nawet jeśli dotyczyło innej osoby.
 
-**Proponowane rozwiązanie:** w pytaniu do Basala wskazać dokładnie „powód D. Ł. (1), mąż zmarłej”. Przed dopuszczeniem opisu odfiltrować fragmenty jawnie dotyczące D. Ł. (2). Nie sumować wszystkich kwot z rodzinnej sprawy pierwszoinstancyjnej, bo zakres tej apelacji jest węższy. Gdy model nie odróżni osób, pozostawić opis jako nieustalony zamiast przypisywać szkodę córki ojcu.
+**Proponowane rozwiązanie:** pytania do basala powinny być ogólne (pasowac do kazdego case'a), ale nie pozostawiać mu takiego pola do interpretacji. dobre pytanie powinno ograniczac takie wątpliwości basala. innych pytan tez to sie tyczy
 
 ### 275708 — V ACa 154/16
 
@@ -89,15 +99,14 @@ najpierw szukamy gru
 
 **Przyczyna:** trafny kontekst wypłaty został znaleziony, ale Basal zwrócił „wypłacił kwotę 9.000” bez waluty i z pewnością około 0,115. Niespełnienie warunków ekstrakcji zamieniono na zero.
 
-**Proponowane rozwiązanie:** w znalezionym zdaniu najpierw wyodrębnić pojedynczą kwotę `9000 zł`. Basala pytać krótko, czy jest to wcześniejsze świadczenie wypłacone powódce, zamiast prosić o dowolny fragment tekstu. Na początku nie obniżać globalnie progu 0,6. Rozdzielić w istniejącej diagnostyce brak potwierdzenia od rzeczywistego braku wypłaty.
-
+**Proponowane rozwiązanie:** „wypłacił kwotę 9.000” - filtrować samą liczbe. NIGDY nie potrzebujemy waluty. zakladamy ze to zł (wyszukiwanie powinno zostać tu niezmienne), mam na mysli samą filtracje przed zapisaniem.
 ### 289025 — I C 817/14
 
 **Opis:** target **40 000 zł** jest liczbowo poprawny, ale `damage` to „Dowód: przesłuchanie powódki K. Z. (1)”. Źródło opisuje **przetokę tchawiczo-przełykową**, dodatkową operację i dolegliwości.
 
 **Przyczyna:** marker dowodowy uzyskał trafność dla szkody około 0,742. Target wybrano z nagłówka żądania, a nie z rozstrzygnięcia; w tej sprawie obie kwoty są takie same, co maskuje błąd metody.
 
-**Proponowane rozwiązanie:** przed oceną cech odfiltrować same linie zaczynające się od „Dowód:”, „dowody:” lub zawierające wyłącznie wskazanie dokumentu czy przesłuchania. Skrócić pytanie do Basala do żądania konkretnego opisu uszczerbku danej powódki. Nagłówek „o zadośćuczynienie ...” kierować do żądania lub pomijać; target wybierać najpierw z sentencji. Bez prawidłowego opisu szkody nie akceptować rekordu.
+**Proponowane rozwiązanie:** podstawowy fix + wyzszy prog
 
 ### 304803 — I C 768/15
 
@@ -105,7 +114,7 @@ najpierw szukamy gru
 
 **Przyczyna:** ogólny filtr słów dopuścił historyczną nawiązkę jako target. Samo wystąpienie zadośćuczynienia w tekście wystarczyło do zakwalifikowania całej sprawy jako odpowiedniego przykładu.
 
-**Proponowane rozwiązanie:** dodać wstępny filtr konstrukcji „roszczenie regresowe” i „zwrot wypłaconego odszkodowania”, sprawdzając również, kto jest powodem. Jeśli regres nie jest obecnie modelowany, odrzucić taki przypadek. Nie odrzucać automatycznie każdej sprawy z ubezpieczycielem — istotna jest jego rola jako powoda żądającego zwrotu. Przed wyborem targetu odfiltrować kwoty opisane jako zasądzone we wcześniejszym postępowaniu.
+**Proponowane rozwiązanie:** brakuje informacji o tym jaki dokladnie fragment tekstu oznaczono jako target. wyzszy próg + biezący fix na ten moment. jak skonczysz kodować przedstaw wiecej szczegółów tego/ biezącego rekordu
 
 ### 333609 — I C 140/15
 
@@ -113,7 +122,7 @@ najpierw szukamy gru
 
 **Przyczyna:** jako denial wybrano zdanie, w którym sąd mówi o zasądzeniu 110 000 zł. Podobieństwo 0,865 przekroczyło próg 0,85, chociaż zdanie nie stwierdza oddalenia. Ścieżka zera ominęła dalsze rozpoznanie kwot.
 
-**Proponowane rozwiązanie:** przed uznaniem denial wymagać wyraźnego zwrotu o oddaleniu lub odmowie i odrzucać jako denial zdania mówiące wyłącznie „sąd zasądził”. Samo ponowne podniesienie progu nie usuwa przyczyny. Następnie zebrać kwoty główne z pierwszych pięciu punktów sentencji, a pominąć punkty o kosztach. W pytaniu o szkodę wymagać opisu straty, nie tylko rokowania na przyszłość. Jeśli nie uda się zebrać zgodnego opisu dla całej grupy, nie akceptować rekordu.
+**Proponowane rozwiązanie:** rozszerzyć baze denial. podać dokładne zdania które źle oznaczono po zakonczeniu kodowania.
 
 ### 337201 — I C 66/15
 
@@ -121,7 +130,7 @@ najpierw szukamy gru
 
 **Przyczyna:** zdanie o braku podstaw do przyznania pełnej żądanej kwoty potraktowano jako całkowite oddalenie. Similarity wyniosło 0,886. Uzasadnienie obniżenia żądania nie jest dowodem braku jakiegokolwiek świadczenia.
 
-**Proponowane rozwiązanie:** odfiltrować jako pełny denial sformułowania „w kwocie zażądanej”, „w pozostałej części”, „ponad kwotę” i „dalej idące żądanie”. Rozszerzyć wzorce `mixed` o takie przypadki. Najpierw sprawdzić dodatnie zasądzenie z sentencji. Przy wcześniejszej wypłacie preferować jawne podsumowanie 110 000 zł, zamiast dodawać do niego ponownie wcześniejsze części tej samej wypłaty.
+**Proponowane rozwiązanie:** rozszerzyć wzorce. podstawowy fix z podziałem zdań na wycinki powinien zrobić robotę.
 
 ### 369009 — I C 537/16
 
@@ -129,7 +138,7 @@ najpierw szukamy gru
 
 **Przyczyna:** wybrano tylko jeden składnik. Drugą klauzulę skierowano do odsetek, ponieważ obok kwoty głównej wymieniała również kwoty stanowiące podstawę naliczania odsetek.
 
-**Proponowane rozwiązanie:** w każdym punkcie „zasądza ... kwotę ...” najpierw wyodrębnić świadczenie główne. Dalszy tekst „z odsetkami ... od kwoty ...” odciąć od parsowania kolejnych składników targetu. Dodać wzorzec takiej klauzuli do bazy `judgment`, a następnie zsumować dwa główne świadczenia. Nie dodawać drugi raz podstaw naliczania odsetek ani wcześniejszych wypłat.
+**Proponowane rozwiązanie:** wycinki do poszczególnych kwot powinny zrobić robotę. w ten sposób jedna kwota moze isc do targetu, kolejna do prior payment
 
 ## Przypadki bez stwierdzonego podstawowego błędu
 

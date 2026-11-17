@@ -36,6 +36,7 @@ def select_facts(diagnostics, threshold, maximum_leak):
                 bool(api.CURRENCY.search(row["text"])),
                 "source sentence contains currency",
             ),
+            (bool(api.EVIDENCE_MARKER.search(row["text"])), "evidence marker instead of factual description"),
             (not any(char.isalpha() for char in row["text"]), "no descriptive text"),
             (
                 row["text"].rstrip().endswith(":"),
@@ -166,6 +167,9 @@ async def extract_features(server, text, config, identifier):
             answer, mapping, fields, threshold
         )
         for field in fields:
+            if quotes[field] and api.EVIDENCE_MARKER.search(values[field]):
+                statuses[field] = "extracted description rejected: evidence marker"
+                continue
             if quotes[field] and api.CURRENCY.search(values[field]):
                 statuses[field] = (
                     "extracted description rejected: source sentence contains currency"

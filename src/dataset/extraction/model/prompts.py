@@ -48,7 +48,12 @@ DEFAULTS = {
         },
         "extraction": {
             "instructions": "Dla każdego pola wybierz fragment źródła odpowiadający na jego pytanie. "
-            "Zachowaj negacje, osobę i czas. Nie dopisuj faktów. Opisuj poszkodowanego. "
+            "Zachowaj negacje, osobę i czas. Nie dopisuj faktów. Opisuj osoby dochodzące "
+            "świadczenia w bieżącej sprawie. Rozróżniaj oznaczenia osób, również numery "
+            "w nawiasach przy takich samych inicjałach. Nie przypisuj powodowi obrażeń "
+            "jego dziecka lub innej osoby. Przy kilku powodach uwzględnij ich własne szkody, "
+            "bez domyślania brakujących opisów. Same wskazania dowodów, przesłuchań "
+            "i słowo Bezsporne nie opisują szkody. "
             "Pomiń kwoty, wynik sprawy i uzasadnienie wysokości świadczenia. "
             "Nie kopiuj fragmentu do pola, na którego pytanie nie odpowiada. "
             "Jeśli brak odpowiedzi, wybierz not stated.",
