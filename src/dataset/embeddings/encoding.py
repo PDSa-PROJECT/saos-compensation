@@ -4,8 +4,9 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from .settings import ENCODER_SETTINGS, EncoderSettings
+
 ROOT = Path(__file__).resolve().parents[3]
-ENCODER_SETTINGS = ("model", "revision", "device", "batch_size", "max_length")
 
 
 def validate_settings(settings):
@@ -17,18 +18,10 @@ def validate_settings(settings):
     returns:
         None.
     """
-    if not isinstance(settings, dict) or not set(ENCODER_SETTINGS) <= set(settings):
+    if not isinstance(settings, dict):
         raise ValueError(f"Embedding settings require {list(ENCODER_SETTINGS)}")
-    for key in ("model", "revision"):
-        if not isinstance(settings[key], str) or not settings[key].strip():
-            raise ValueError(f"Invalid embedding {key}")
-    if settings["device"] not in ("cpu", "mps", "cuda"):
-        raise ValueError("Embedding device must be cpu, mps or cuda")
-    for key in ("batch_size", "max_length"):
-        if type(settings[key]) is not int or settings[key] <= 0:
-            raise ValueError(f"Embedding {key} must be a positive integer")
-    if settings["max_length"] < 4:
-        raise ValueError("Embedding max_length must accommodate special tokens and text")
+    EncoderSettings.from_mapping({key: value for key, value in settings.items()
+                                  if key in ENCODER_SETTINGS})
 
 
 class SentenceEncoder:
