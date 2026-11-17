@@ -75,7 +75,7 @@ def load_raw_checkpoint(config):
     except (KeyError, TypeError, ValueError) as error:
         raise ValueError("Invalid raw checkpoint request") from error
     if state["request"] != expected:
-        raise ValueError("Acquisition date settings changed; use a different download_path")
+        raise ValueError("Acquisition query or date settings changed; use a different download_path")
     return state
 
 

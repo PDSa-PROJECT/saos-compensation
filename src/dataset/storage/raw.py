@@ -1,4 +1,4 @@
-"""Unmodified SAOS dump pages and reproducible local input snapshots."""
+"""Complete SAOS sources and reproducible local input snapshots."""
 
 import hashlib
 import json
@@ -14,7 +14,7 @@ def page_path(directory, group, number):
     args:
         directory: Raw dataset root.
         group: judgments or common_courts.
-        number: Zero-based dump page.
+        number: Zero-based source page.
 
     returns:
         Path of the raw response JSON.

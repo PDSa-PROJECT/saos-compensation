@@ -88,7 +88,7 @@ Run the two independent commands from the repository root:
 uv run --no-sync get-raw-data --help
 uv run --no-sync process-data --help
 
-# Download complete API responses without filtering or inference
+# Search broadly and download complete candidate judgments without inference
 uv run --no-sync get-raw-data --max-age-years 10 --max-gib 10 --download-path tmp/test --debug --timeout 60
 
 # Extract features and targets from the saved JSON into a separate directory
@@ -106,8 +106,9 @@ Dataset paths accept absolute locations, such as `process-data --input-path /tmp
 | Argument | Meaning |
 |---|---|
 | `--config-dir PATH` | Directory containing `api.yaml`; defaults to `configs/dataset/acquisition` |
+| `--search-query TEXT` | Broad full-text query; default `zadośćuczynienie` |
 | `--max-age-years N` | Include judgments from the last N years, anchored to the initial run date |
-| `--max-pages N` | Maximum total judgment dump pages across resumes; `0` reads all pages |
+| `--max-pages N` | Maximum total judgment search pages across resumes; `0` reads all pages |
 | `--max-gib N` | Total raw-output limit in GiB across resumes; `0` disables it |
 | `--download-path PATH` | Raw output directory (absolute or relative); default `tmp/raw` |
 | `--timeout SECONDS` | HTTP connection/read timeout |
@@ -130,7 +131,7 @@ For `process-data`, debug adds `source.txt` and `model_calls.json` to retained c
 
 Processing checkpoints and temporary `pending/` state preserve progress and completed model decisions in both modes. Pending state is removed after acceptance or rejection. See [output and resume details](docs/acquisition.md).
 
-Both commands support `-h`/`--help`. Explicit arguments override only their corresponding YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
+Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, root `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
 
 ## Documentation
 

@@ -1,4 +1,4 @@
-"""Download unmodified SAOS JSON without model processing."""
+"""Search broadly and download complete SAOS judgments without model processing."""
 
 import argparse
 
@@ -17,11 +17,16 @@ def parse_arguments(arguments=None):
     """
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="Explicit CLI options override acquisition/api.yaml; use process-data for extraction.",
+        epilog="Explicit CLI options override environment, .env and YAML; use process-data for extraction.",
     )
     parser.add_argument(
         "--config-dir",
         help="Acquisition configuration directory (default: configs/dataset/acquisition)",
+    )
+    parser.add_argument(
+        "--search-query",
+        default=argparse.SUPPRESS,
+        help="Broad SAOS full-text query (default: zadośćuczynienie)",
     )
     parser.add_argument(
         "--max-age-years",
@@ -33,7 +38,7 @@ def parse_arguments(arguments=None):
         "--max-pages",
         type=int,
         default=argparse.SUPPRESS,
-        help="Maximum dump pages (100 judgments each); 0 reads all pages",
+        help="Maximum search pages (100 judgments each); 0 reads all pages",
     )
     parser.add_argument(
         "--max-gib",

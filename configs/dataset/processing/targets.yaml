@@ -1,8 +1,6 @@
 embedding:
   model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
   revision: e8f8c211226b894fcb81acc59f3b34ba3efd5f42
-  device: mps # cpu, mps or cuda.
-  batch_size: 64
   max_length: 128 # Longer sentences use all token windows, without dropping the tail.
   minimum_cosine_similarity: 0.85 # Strict threshold; any eligible non-target winner takes priority over judgment.
 

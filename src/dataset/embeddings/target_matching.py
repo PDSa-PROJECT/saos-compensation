@@ -1,17 +1,13 @@
 """Embedding-based selection of award and request sentences."""
 
 import json
-import math
 import re
 from functools import lru_cache, partial
 from itertools import batched
 
 from ..extraction.source.text import MONEY, REASONS, sentence_fragments
-from .encoding import create_embeddings, validate_settings as validate_encoder_settings
-
-TARGET_CLASSES = ("judgment", "request")
-EXCLUDED_CLASSES = ("prior_payment", "procedural_costs", "mixed", "other_payments")
-PATTERN_CLASSES = TARGET_CLASSES + EXCLUDED_CLASSES + ("judgment-denial",)
+from .encoding import create_embeddings
+from .settings import EXCLUDED_CLASSES, PATTERN_CLASSES, TARGET_CLASSES, TargetSettings
 
 
 def validate_settings(settings, patterns):
@@ -25,51 +21,7 @@ def validate_settings(settings, patterns):
     returns:
         None.
     """
-    required = {
-        "model",
-        "revision",
-        "device",
-        "batch_size",
-        "max_length",
-        "minimum_cosine_similarity",
-        "candidate_keywords",
-    }
-    if not isinstance(settings, dict) or set(settings) != required:
-        raise ValueError(f"targets.yaml embedding requires {sorted(required)}")
-    validate_encoder_settings(settings)
-    threshold = settings["minimum_cosine_similarity"]
-    if (
-        type(threshold) not in (int, float)
-        or not math.isfinite(threshold)
-        or not 0 <= threshold <= 1
-    ):
-        raise ValueError("minimum_cosine_similarity must be between 0 and 1")
-    keywords = settings["candidate_keywords"]
-    # Denial has an explicit-dismissal guard instead of monetary keyword groups.
-    keyword_groups = {*TARGET_CLASSES, *EXCLUDED_CLASSES, "shared"}
-    if not isinstance(keywords, dict) or set(keywords) != keyword_groups:
-        raise ValueError(
-            f"candidate_keywords requires {sorted(keyword_groups)} groups"
-        )
-    if not any(keywords.values()) or any(
-        not isinstance(words, list)
-        or any(not isinstance(word, str) or not word.strip() for word in words)
-        for words in keywords.values()
-    ):
-        raise ValueError(
-            "candidate_keywords groups must contain word stems, with at least one nonempty group"
-        )
-    if not isinstance(patterns, dict) or set(patterns) != set(PATTERN_CLASSES):
-        raise ValueError(f"targets.yaml patterns requires {list(PATTERN_CLASSES)} lists")
-    for label, phrases in patterns.items():
-        if (
-            not isinstance(phrases, list)
-            or not phrases
-            or any(not isinstance(p, str) or not p.strip() for p in phrases)
-        ):
-            raise ValueError(f"Target patterns for {label} must be nonempty strings")
-        for phrase in phrases:
-            prepare_text(phrase)
+    TargetSettings.from_mapping({"embedding": settings, "patterns": patterns})
 
 
 def candidate_sentences(text, keywords):

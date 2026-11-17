@@ -10,10 +10,10 @@
 ├── common_courts/
 │   └── 00000000.json       # full original court API response per page
 └── judgments/
-    └── 00000000.json       # full original judgment API response per page
+    └── 00000000.json       # search envelope, full items and original searchItems snippets
 ```
 
-Responses retain their complete JSON structure, unknown fields and HTML text. These are API-page files, not extracted case records. No case is discarded for missing compensation evidence during downloading. Court pages are downloaded first for later local metadata joins. Raw `--debug` controls only per-page console progress; `--no-debug` still saves the same raw JSON and checkpoint and prints the final summary.
+Court responses retain their original structure. Judgment pages retain full source objects, unknown fields and HTML in items, with original search snippets in searchItems. These are source-page files, not extracted case records. The broad configured query selects candidates; downloading does not validate their awarded amount or harm evidence. Court pages are downloaded first for later local metadata joins. Raw `--debug` controls only per-page console progress; `--no-debug` still saves the same raw JSON and checkpoint and prints the final summary.
 
 ## Processed output and admission
 
@@ -41,10 +41,10 @@ Processing debug adds only `source.txt` and `model_calls.json` to retained case 
 
 ## Resume and storage limits
 
-Restart the same stage command after interruption. Raw `checkpoint.json` pins the dataset ID and original date bounds and records independent court/judgment page cursors. Each raw page becomes durable before its cursor advances. A saved page left behind by an interrupted checkpoint write is reused without another HTTP request. Debug, timeout, size and page limits may change; increasing the page limit continues downloading. Changing the age range requires a new download path. A completed download performs no more requests.
+Restart the same stage command after interruption. Raw `checkpoint.json` pins the dataset ID and original date bounds and broad search query and records independent court/judgment page cursors. Each raw page becomes durable before its cursor advances. A saved page left behind by an interrupted checkpoint write is reused without another HTTP request. Debug, timeout, size and page limits may change; increasing the page limit continues downloading. Changing the age range or search query requires a new download path. Older unfiltered raw checkpoints remain readable by processing but cannot be resumed by the filtered downloader. A failed detail request leaves the entire search page uncommitted; resuming fetches that page again. A completed download performs no more requests.
 
 The processing checkpoint pins extraction configuration, raw content signature, locality snapshot hash and the next page/item. Final case files become durable before processing advances. Saved records are recognized without repeated extraction. Temporary `<SAOS_ID>/pending/` state retains source/configuration and completed model decisions independently of debug; it is removed after acceptance or rejection. Rejecting a case never deletes its raw input.
 
 Finish raw downloading before processing the saved snapshot. A page-limited raw dataset can be processed even if more pages exist remotely. Extending or editing raw input requires a new processing output path. Models, patterns and questions must remain compatible with the processing checkpoint; changed experiments or legacy combined-pipeline artifacts require a separate destination. The extractor remains version **31**. Processing debug, timeout and size limits may change during a resume. Run one process per output directory.
 
-Each stage enforces its own `max_gib` against all files in its output directory, including existing files and atomic temporary writes; processing also counts pending/debug files. A refused write leaves resumable progress; increase the corresponding limit to continue. Existing artifacts are preserved, and neither stage adopts an unrelated or legacy checkpoint. Input/output directories must not overlap. Model caches stay outside size-limited processed output. A page limit follows dump order and is not random sampling.
+Each stage enforces its own `max_gib` against all files in its output directory, including existing files and atomic temporary writes; processing also counts pending/debug files. A refused write leaves resumable progress; increase the corresponding limit to continue. Existing artifacts are preserved, and neither stage adopts an unrelated or legacy checkpoint. Input/output directories must not overlap. Model caches stay outside size-limited processed output. A page limit follows ascending SAOS ID search order and is not random sampling.

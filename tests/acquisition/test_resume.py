@@ -56,7 +56,7 @@ def raw_download(monkeypatch, tmp_path):
         return {
             "items": [{"id": number + 10, "courtType": "SUPREME", "textContent": "<p>Bez kwoty.</p>", "extra": [None, 7]}],
             "links": [{"rel": "next", "href": "next"}] if number == 0 else [],
-            "queryTemplate": {key: {"value": value} for key, value in params.items()},
+            "queryTemplate": {key: {"value": [value] if key == "judgmentTypes" else value} for key, value in download.api.search_parameters(params).items()},
             "unknown": {"preserved": True},
         }
 
@@ -242,3 +242,30 @@ def test_raw_size_limit_and_legacy_artifacts_are_preserved(raw_download, tmp_pat
     with pytest.raises(ValueError, match="raw checkpoint"):
         download.download({**config, "download_path": "legacy"})
     assert json.loads((legacy / "checkpoint.json").read_text()) == {"page": 3}
+
+
+def test_search_filter_is_pinned_and_legacy_downloads_are_preserved(raw_download, tmp_path):
+    """Reject query changes and old unfiltered checkpoints without rewriting data.
+
+    args:
+        raw_download: Isolated download and HTTP fixture.
+        tmp_path: Temporary dataset root.
+
+    returns:
+        None.
+    """
+    config, _ = raw_download
+    download.download(config)
+    path = tmp_path / "raw/checkpoint.json"
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="query or date settings changed"):
+        download.download({**config, "search_query": "inna fraza"})
+    assert path.read_bytes() == before
+    state = json.loads(before)
+    for key in ("all", "courtType", "judgmentTypes", "sortingField", "sortingDirection"):
+        state["request"].pop(key)
+    path.write_text(json.dumps(state))
+    legacy = path.read_bytes()
+    with pytest.raises(ValueError, match="different download_path"):
+        download.download(config)
+    assert path.read_bytes() == legacy

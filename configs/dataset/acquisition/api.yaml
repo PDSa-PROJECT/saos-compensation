@@ -1,13 +1,6 @@
+# Broad full-text query; inflection is handled by the SAOS search engine.
+search_query: "zadośćuczynienie"
 # Judgment date range in years before today.
 max_age_years: 10
-# Maximum dump pages (100 judgments each); 0 reads all pages.
+# Maximum search pages (100 judgments each); 0 reads all pages.
 max_pages: 0
-
-# Total output-directory size in GiB across resumed runs; 0 disables the limit.
-max_gib: 0.5
-# Print per-page download progress; raw API responses are always saved.
-debug: true
-# Output directory: absolute or relative to the project root.
-download_path: "tmp/raw"
-# HTTP connection/read timeout in seconds, not a total download limit.
-timeout: 20

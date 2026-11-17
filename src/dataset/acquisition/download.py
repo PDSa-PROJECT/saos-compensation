@@ -1,4 +1,4 @@
-"""Raw SAOS acquisition without text selection, normalization or inference."""
+"""Broad SAOS search and complete judgment acquisition without inference."""
 
 import json
 from datetime import datetime, timezone
@@ -45,9 +45,7 @@ def download(config):
                     path = page_path(directory, "judgments", number)
                     params = {**checkpoint["request"], "pageNumber": number}
                     payload = read_page(path) if path.exists() else api.search_judgments(params, session=session, timeout=config["timeout"])
-                    template = payload.get("queryTemplate")
-                    if not isinstance(template, dict) or any(not isinstance(template.get(key), dict) or template[key].get("value") != value for key, value in params.items()):
-                        raise ValueError("Raw page query does not match the saved request")
+                    api.validate_search_query(payload, params)
                     write_page(path, payload)
                     checkpoint.update(page=number + 1, complete=not any(link["rel"] == "next" for link in payload["links"]))
                     save_checkpoint(directory, checkpoint)

@@ -32,7 +32,7 @@ def search_response(params, identifiers, more=False):
     return {
         "items": [{"id": identifier} for identifier in identifiers],
         "info": None,
-        "queryTemplate": {key: {"value": value} for key, value in params.items()},
+        "queryTemplate": {key: {"value": [value] if key == "judgmentTypes" else value} for key, value in params.items()},
         "links": [{"rel": "self", "href": api.BASE_URL + "/dump/judgments"}]
         + (
             [
@@ -61,9 +61,9 @@ def test_invalid_dump_response_stops_download(monkeypatch, tmp_path, defect):
         None.
     """
     _, _, params = search_settings(CONFIG)
-    payload = search_response(params, [1, 2], True)
+    payload = search_response(api.search_parameters(params), [1, 2], True)
     if defect == "query":
-        payload["queryTemplate"]["judgmentStartDate"]["value"] = "2000-01-01"
+        payload["queryTemplate"]["judgmentDateFrom"]["value"] = "2000-01-01"
     elif defect == "duplicate":
         payload["items"][1] = payload["items"][0]
     elif defect == "id":
@@ -227,3 +227,65 @@ def test_court_dump_validates_transport_without_processing(monkeypatch, defect):
             api.search_courts(0)
     else:
         assert api.search_courts(0) is payload
+
+
+@pytest.mark.parametrize("defect", [None, "id", "text", "timeout", "query"])
+def test_search_fetches_complete_judgments(monkeypatch, defect):
+    """Fetch full sources using one session and reject partial or mismatched pages.
+
+    args:
+        monkeypatch: HTTP boundary replacement.
+        defect: Failure to inject into the search or full judgment response.
+
+    returns:
+        None.
+    """
+    from urllib.parse import parse_qs, urlparse
+
+    params = search_settings(CONFIG)[2]
+    query = api.search_parameters(params)
+    payload = search_response(query, [42])
+    payload["queryTemplate"]["all"] = params["all"]
+    if defect == "query":
+        payload["queryTemplate"]["judgmentTypes"]["value"] = ["DECISION"]
+    payload["items"][0]["textContent"] = "snippet"
+    full = {"id": 42, "textContent": "<p>Complete source.</p>", "extra": [None, 7]}
+    if defect == "id":
+        full["id"] = 43
+    if defect == "text":
+        full["textContent"] = None
+    calls = []
+    session = object()
+
+    def fetch(url, directory, client, timeout):
+        """Return search snippets or full data while recording request controls.
+
+        args:
+            url: Requested SAOS endpoint.
+            directory: Optional diagnostics destination.
+            client: Shared session.
+            timeout: Explicit HTTP timeout.
+
+        returns:
+            Search or detail JSON payload.
+        """
+        calls.append((url, client, timeout))
+        if "/search/judgments" in url:
+            assert parse_qs(urlparse(url).query)["all"] == ["zadośćuczynienie"]
+            assert "judgmentDateFrom" in parse_qs(urlparse(url).query)
+            return payload
+        if defect == "timeout":
+            raise requests.Timeout("detail unavailable")
+        assert url.endswith("/judgments/42")
+        return {"data": full}
+
+    monkeypatch.setattr(api, "fetch_json", fetch)
+    if defect:
+        with pytest.raises(requests.Timeout if defect == "timeout" else ValueError):
+            api.search_judgments(params, session=session, timeout=12)
+    else:
+        result = api.search_judgments(params, session=session, timeout=12)
+        assert result["items"] == [full]
+        assert result["searchItems"] == payload["items"]
+    assert all(client is session and timeout == 12 for _, client, timeout in calls)
+    assert len(calls) == (1 if defect == "query" else 2)

@@ -81,9 +81,43 @@ def fetch_json(url, directory=None, session=None, timeout=30):
     return payload
 
 
+def search_parameters(params):
+    """Translate saved inclusive date bounds to SAOS search parameters.
+
+    args:
+        params: Checkpoint query using stable internal date keys.
+
+    returns:
+        Query accepted by the search endpoint.
+    """
+    names = {"judgmentStartDate": "judgmentDateFrom", "judgmentEndDate": "judgmentDateTo"}
+    return {names.get(key, key): value for key, value in params.items()}
+
+
+def validate_search_query(payload, params):
+    """Require the search response to acknowledge every requested filter.
+
+    args:
+        payload: Live or persisted search response.
+        params: Internal or API query parameters.
+
+    returns:
+        None.
+    """
+    template = payload.get("queryTemplate")
+    if not isinstance(template, dict):
+        raise ValueError("Search response is missing queryTemplate")
+    for key, value in search_parameters(params).items():
+        applied = template.get(key)
+        applied = applied.get("value") if isinstance(applied, dict) else applied
+        expected = [value] if key == "judgmentTypes" else value
+        if applied != expected:
+            raise ValueError(f"API did not apply {key}")
+
+
 def search_judgments(params, directory=None, session=None, timeout=30):
     """
-    Fetch a dump page and validate its query, identifiers and pagination.
+    Search broadly, validate pagination and fetch every complete judgment.
 
     args:
         params: Effective SAOS query parameters.
@@ -92,10 +126,11 @@ def search_judgments(params, directory=None, session=None, timeout=30):
         timeout: Connection/read timeout in seconds.
 
     returns:
-        Result of this operation.
+        Search envelope with complete items and original searchItems snippets.
     """
+    params = search_parameters(params)
     url = (
-        requests.Request("GET", BASE_URL + "/dump/judgments", params=params)
+        requests.Request("GET", BASE_URL + "/search/judgments", params=params)
         .prepare()
         .url
     )
@@ -103,21 +138,15 @@ def search_judgments(params, directory=None, session=None, timeout=30):
     if not isinstance(result.get("items"), list) or not isinstance(
         result.get("links"), list
     ):
-        raise ValueError("Dump response is missing items or pagination links")
-    template = result.get("queryTemplate")
-    if not isinstance(template, dict):
-        raise ValueError("Dump response is missing queryTemplate")
-    for key, value in params.items():
-        applied = template.get(key)
-        if not isinstance(applied, dict) or applied.get("value") != value:
-            raise ValueError(f"API did not apply {key}")
+        raise ValueError("Search response is missing items or pagination links")
+    validate_search_query(result, params)
     ids = [
         item.get("id") if isinstance(item, dict) else None for item in result["items"]
     ]
     if any(type(value) is not int or value <= 0 for value in ids):
-        raise ValueError("Dump returned an invalid judgment ID")
+        raise ValueError("Search returned an invalid judgment ID")
     if len(ids) != len(set(ids)) or len(ids) > params["pageSize"]:
-        raise ValueError("Dump returned duplicate IDs or an oversized page")
+        raise ValueError("Search returned duplicate IDs or an oversized page")
     relations = set()
     for link in result["links"]:
         if (
@@ -131,8 +160,22 @@ def search_judgments(params, directory=None, session=None, timeout=30):
             raise ValueError("Duplicate pagination relation")
         relations.add(link["rel"])
     if "self" not in relations or ("next" in relations and not ids):
-        raise ValueError("Invalid dump pagination")
-    return result
+        raise ValueError("Invalid search pagination")
+    items = []
+    for item in result["items"]:
+        identifier = item["id"]
+        detail = fetch_json(f"{BASE_URL}/judgments/{identifier}", directory, session, timeout)
+        data = detail.get("data")
+        if (
+            not isinstance(data, dict)
+            or type(data.get("id")) is not int
+            or data["id"] != identifier
+            or not isinstance(data.get("textContent"), str)
+            or not data["textContent"].strip()
+        ):
+            raise ValueError(f"Invalid full judgment response: {identifier}")
+        items.append(data)
+    return {**result, "searchItems": result["items"], "items": items}
 
 
 
