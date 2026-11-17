@@ -13,7 +13,7 @@
     └── 00000000.json       # full original judgment API response per page
 ```
 
-Responses retain their complete JSON structure, unknown fields and HTML text. These are API-page files, not extracted case records. No case is discarded for missing compensation evidence during downloading. Court pages are downloaded first for later local metadata joins.
+Responses retain their complete JSON structure, unknown fields and HTML text. These are API-page files, not extracted case records. No case is discarded for missing compensation evidence during downloading. Court pages are downloaded first for later local metadata joins. Raw `--debug` controls only per-page console progress; `--no-debug` still saves the same raw JSON and checkpoint and prints the final summary.
 
 ## Processed output and admission
 
@@ -35,7 +35,7 @@ Before monetary target selection, every full sentence is compared with the 12 `j
 
 `procedural_costs` includes mutual settlement and cost offset patterns, with `rozlicz` and `potrąc` keyword stems. Excluding such a payment does not establish a denial or a zero target; a separate eligible award may still be selected.
 
-Debug adds only `source.txt` and `model_calls.json`; evidence and confidence diagnostics stay out of the two basic files. Rejected cases leave no final case files. Existing artifacts are preserved, so use a fresh output path for a clean dataset layout. Operational summaries are printed to the console.
+Processing debug adds only `source.txt` and `model_calls.json` to retained case folders; evidence and confidence diagnostics stay out of the two basic files. With `--no-debug`, newly saved cases contain only `record.json` and `award.json` and must have `valid: true`. Checkpoints and temporary pending state are maintained in either mode. Rejected cases leave no final case files. Existing artifacts are preserved, so use a fresh output path for a clean dataset layout. Operational summaries are printed to the console.
 
 ## Resume and storage limits
 

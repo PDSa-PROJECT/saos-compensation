@@ -16,9 +16,9 @@ The stages have separate configuration directories:
 | `configs/dataset/processing/targets.yaml` | Embedding model/device, candidate keywords, similarity threshold and target/exclusion patterns |
 | `configs/dataset/processing/basal.yaml` | Basal model/device and extraction/review thresholds |
 
-Acquisition defaults: `max_age_years: 10`, `max_pages: 0` (unlimited), `max_gib: 0.5`, `download_path: tmp/raw`, `debug: true`, `timeout: 20`. Page limits count judgment pages across resumptions, excluding court metadata. Raw debug prints per-page progress; all raw responses are saved regardless of this flag.
+Acquisition defaults: `max_age_years: 10`, `max_pages: 0` (unlimited), `max_gib: 0.5`, `download_path: tmp/raw`, `debug: true`, `timeout: 20`. Page limits count judgment pages across resumptions, excluding court metadata. Raw debug controls only per-page console progress. Full raw responses, the download checkpoint and the final console summary are produced with either debug value.
 
-Processing defaults: `input_path: tmp/raw`, `output_path: tmp/processed`, `max_gib: 0.5`, `debug: true`, `timeout: 20`. Its size budget applies only to processed output. Debug preserves source/model-call diagnostics and eligible failed target attempts. The timeout applies to locality metadata downloads, not SAOS. Input and output paths must be relative to the repository root and must not overlap, including through symlinks.
+Processing defaults: `input_path: tmp/raw`, `output_path: tmp/processed`, `max_gib: 0.5`, `debug: true`, `timeout: 20`. Its size budget applies only to processed output. Debug adds `source.txt` and `model_calls.json` to retained case folders and can retain missing or unconfirmed targets as `valid: false` when accepted source-backed damage evidence exists. Source and leakage validation remain active. With debug disabled, newly saved cases contain only `record.json` and `award.json` and require `valid: true`; existing artifacts are preserved. Processing checkpoints and temporary pending model decisions are saved in either mode. Training must select `valid: true` records. The timeout applies to locality metadata downloads, not SAOS. Input and output paths must be relative to the repository root and must not overlap, including through symlinks.
 
 Explicit CLI arguments override only their corresponding stage defaults:
 

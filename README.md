@@ -111,6 +111,8 @@ The equivalent module entry points are `python -m dataset.cli` and `python -m da
 | `--timeout SECONDS` | HTTP connection/read timeout |
 | `--debug`, `--no-debug` | Enable or disable per-page console progress; raw JSON is always saved |
 
+For `get-raw-data`, debug controls only per-page console progress. Full raw JSON responses and the download checkpoint are saved in both modes; the final console summary is also printed in both modes.
+
 ### Processing arguments
 
 | Argument | Meaning |
@@ -121,6 +123,10 @@ The equivalent module entry points are `python -m dataset.cli` and `python -m da
 | `--max-gib N` | Total processed-output limit in GiB across resumes; independent of the raw limit |
 | `--timeout SECONDS` | HTTP timeout for locality metadata |
 | `--debug`, `--no-debug` | Enable or disable source/model-call diagnostics and eligible failed attempts |
+
+For `process-data`, debug adds `source.txt` and `model_calls.json` to retained case folders. It can also retain completed attempts with missing or unconfirmed targets as `valid: false` in `award.json`, provided accepted source-backed `damage` evidence exists. Source and leakage checks remain active. With `--no-debug`, newly saved cases contain only `record.json` and `award.json` and must have `valid: true`; existing artifacts are preserved. Training must select `valid: true` records.
+
+Processing checkpoints and temporary `pending/` state preserve progress and completed model decisions in both modes. Pending state is removed after acceptance or rejection. See [output and resume details](docs/acquisition.md).
 
 Both commands support `-h`/`--help`. Explicit arguments override only their corresponding YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
 
