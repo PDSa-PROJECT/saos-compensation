@@ -55,7 +55,7 @@ def make_matcher(scores, batch_size=2):
 
     args:
         scores: Sentence-to-denial-similarity mapping.
-        batch_size: Maximum sentences evaluated before checking for early rejection.
+        batch_size: Maximum sentences evaluated together during the full scan.
 
     returns:
         Matcher, controlled encoder and CPU configuration.
@@ -96,7 +96,7 @@ def test_denial_uses_strict_configured_similarity_threshold(score, threshold, de
 
 @pytest.mark.parametrize("first", ["Opis sprawy.", "Zasądza 100 zł."])
 def test_denial_checks_full_sentences_without_money_or_keyword_filter(monkeypatch, first):
-    """Stop after a money-free denial without generating any monetary candidates.
+    """Scan the entire judgment without generating monetary candidates after denial.
 
     args:
         monkeypatch: Scoped matcher cache and monetary candidate replacements.
@@ -107,7 +107,9 @@ def test_denial_checks_full_sentences_without_money_or_keyword_filter(monkeypatc
     """
     denial = "Żadne świadczenie nie przysługuje, wobec niewykazania szkody."
     text = first + "\n" + denial + "\nDalsze ustalenia."
-    matcher, encoder, config = make_matcher({first: 0.2, denial: 0.9}, batch_size=1)
+    matcher, encoder, config = make_matcher(
+        {first: 0.2, denial: 0.9, "Dalsze ustalenia.": 0.1}, batch_size=1
+    )
     monkeypatch.setattr(target_matching, "cached_matcher", lambda *args: matcher)
     monkeypatch.setattr(
         target_matching, "candidate_sentences",
@@ -119,7 +121,9 @@ def test_denial_checks_full_sentences_without_money_or_keyword_filter(monkeypatc
     assert text[selected["start"]:selected["end"]] == denial
     assert selected["pattern"] == config["target_patterns"]["judgment-denial"][0]
     assert all(value is None for key, value in matches.items() if key != "judgment-denial")
-    assert encoder.calls[1:] == [[first], [denial]]
+    assert encoder.calls[1:] == [
+        [target_matching.prepare_text(first)], [denial], ["Dalsze ustalenia."]
+    ]
 
 
 def test_no_denial_checks_every_sentence_then_runs_monetary_selection(monkeypatch):
@@ -222,3 +226,39 @@ def test_cost_veto_does_not_hide_another_denial_in_the_same_batch():
     encoder = Encoder({cost: 0.7, denial: 0.69}, {cost: 0.71})
     matcher = target_matching.TargetMatcher(config["embedding"], config["target_patterns"], encoder)
     assert matcher.match_denial(cost + "\n" + denial)["text"] == denial
+
+
+@pytest.mark.parametrize("batch_size", [1, 2, 4])
+def test_denial_keeps_best_match_across_all_batches(batch_size):
+    """Choose a later stronger denial independently of inference batch boundaries.
+
+    args:
+        batch_size: Number of source sentences evaluated together.
+
+    returns:
+        None.
+    """
+    sentences = ["Pierwsze oddalenie.", "Opis sprawy.", "Drugie oddalenie.", "Dalszy opis."]
+    matcher, encoder, _ = make_matcher(
+        dict(zip(sentences, [0.8, 0.2, 0.95, 0.1], strict=True)), batch_size=batch_size
+    )
+    text = "\n".join(sentences)
+    result = matcher.match_denial(text)
+    assert result["text"] == sentences[2]
+    assert result["similarity"] == pytest.approx(0.95)
+    assert text[result["start"]:result["end"]] == sentences[2]
+    assert [sentence for batch in encoder.calls[1:] for sentence in batch] == sentences
+
+
+def test_equal_denial_scores_keep_first_source_sentence():
+    """Keep source order stable when equally strong denials occur in separate batches.
+
+    args:
+        None.
+
+    returns:
+        None.
+    """
+    sentences = ["Pierwsze oddalenie.", "Drugie oddalenie."]
+    matcher, _, _ = make_matcher(dict.fromkeys(sentences, 0.9), batch_size=1)
+    assert matcher.match_denial("\n".join(sentences))["text"] == sentences[0]

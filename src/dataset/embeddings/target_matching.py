@@ -188,7 +188,7 @@ class TargetMatcher:
             text: Full normalized judgment, including sentences without PLN or keywords.
 
         returns:
-            Strongest denial match in the first matching batch, or None.
+            Strongest eligible denial match across the entire judgment, or None.
         """
         from .cosine_similarity import cosine_similarity
 
@@ -207,6 +207,7 @@ class TargetMatcher:
                 {"text": line[0], "start": line.start(), "end": line.end()}
             )
         )
+        result = None
         for batch in batched(sentences, self.settings["batch_size"]):
             vectors = self.encode([prepare_text(row["text"]) for row in batch])
             scores = cosine_similarity(
@@ -217,12 +218,14 @@ class TargetMatcher:
             values = values.masked_fill(values <= cost_values, -1)
             best = int(values.argmax())
             score = float(values[best])
-            if score > self.settings["denial_minimum_cosine_similarity"]:
-                return {
+            if score > self.settings["denial_minimum_cosine_similarity"] and (
+                result is None or score > result["similarity"]
+            ):
+                result = {
                     **batch[best], "similarity": score,
                     "pattern": self.patterns[indices[int(patterns[best])]][1],
                 }
-        return None
+        return result
 
     def match(self, text):
         """
