@@ -78,6 +78,8 @@ uv sync --locked --extra extraction --group test
 
 For embeddings alone, use `uv sync --locked`. PyTorch and Transformers are base dependencies. Basal is optional: the platform extras above or the `extraction` extra install it for the full `get-data` pipeline. The test group adds pytest and may be omitted when only running acquisition. Execute subsequent commands with `uv run --no-sync` to use the installed environment without changing dependencies.
 
+For local runtime settings, optionally copy [`.env.example`](.env.example) to `.env`.
+
 ## Download and extract data
 
 Run commands from the repository root:
@@ -105,9 +107,9 @@ This command downloads judgments and runs extraction. There is no download-only 
 | `--download-path PATH` | Output directory relative to the project root |
 | `--timeout SECONDS` | HTTP connection/read timeout |
 | `--debug` | Add source/model-call diagnostics and retain eligible failed attempts |
-| `--no-debug` | Disable debug output, overriding a true YAML default |
+| `--no-debug` | Disable debug output, overriding environment and YAML values |
 
-Explicit arguments override only their corresponding YAML settings. After setup, `uv run get-data --help` also works; the examples use `--no-sync` to keep dependency synchronization separate from execution.
+Explicit arguments override their corresponding environment, `.env` and YAML values. After setup, `uv run get-data --help` also works; the examples use `--no-sync` to keep dependency synchronization separate from execution.
 
 ## Documentation
 

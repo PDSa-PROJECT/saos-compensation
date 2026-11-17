@@ -1,11 +1,31 @@
 """Shared configuration and source fixtures without inference or network access."""
 
 from pathlib import Path
+import os
 import shutil
 
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def isolate_runtime_sources(monkeypatch, tmp_path):
+    """Keep tests independent of developer runtime variables and the real .env.
+
+    args:
+        monkeypatch: Scoped environment and settings-policy replacements.
+        tmp_path: Temporary root for a missing test dotenv file.
+
+    returns:
+        None.
+    """
+    from dataset.settings import RuntimeSettings
+
+    for name in tuple(os.environ):
+        if name.lower() in RuntimeSettings.model_fields:
+            monkeypatch.delenv(name)
+    monkeypatch.setitem(RuntimeSettings.model_config, "env_file", tmp_path / "root.env")
 
 
 @pytest.fixture(scope="session")

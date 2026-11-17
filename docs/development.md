@@ -12,6 +12,8 @@
 
 These are ordinary module boundaries and explicit dependencies; no container or interface hierarchy is required.
 
+See [settings locations and sources](configuration.md#settings-validation).
+
 ## Checks
 
 After syncing the test group:

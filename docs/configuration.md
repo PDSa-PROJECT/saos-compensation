@@ -10,12 +10,12 @@ The default configuration directory is `configs/dataset/acquisition/`:
 
 | File | Controls |
 |---|---|
-| `api.yaml` | Acquisition dates, page and size limits, output path, debug and HTTP timeout |
+| `api.yaml` | Acquisition date range and page limit |
 | `features.yaml` | Selected metadata/numeric predictors and text extraction questions |
-| `targets.yaml` | Embedding model/device, candidate keywords, similarity threshold and target/exclusion patterns |
-| `basal.yaml` | Basal model/device and extraction/review thresholds |
+| `targets.yaml` | Embedding model/revision/window, candidate keywords, similarity threshold and patterns |
+| `basal.yaml` | Basal model default and extraction/review thresholds |
 
-The current acquisition defaults are:
+The effective acquisition defaults are below; runtime overrides are listed in [`.env.example`](../.env.example).
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -38,7 +38,7 @@ uv run --no-sync get-data \
   --no-debug
 ```
 
-`--debug` enables diagnostics and `--no-debug` overrides a true YAML default. `--config-dir path/to/config` selects another directory containing all four acquisition YAML files. Model and feature settings are changed in YAML.
+`--debug` enables diagnostics and `--no-debug` overrides lower-priority values. `--config-dir path/to/config` selects another directory containing all four acquisition YAML files. YAML keeps model defaults and feature settings.
 
 ### Models and devices
 
@@ -49,4 +49,10 @@ The current models are:
 
 Missing model files download automatically from Hugging Face and are reused from `basal_weights/` and `embedding_weights/`. Keep these caches outside a size-limited output directory. Locality population enrichment also downloads and caches a GUGiK snapshot under `tmp/gugik/`.
 
-The default configuration selects `mps` in **both** `configs/dataset/acquisition/basal.yaml` and `configs/dataset/acquisition/targets.yaml`. Set both devices to `cpu` or `cuda` for another runtime. Unavailable accelerators fail before acquisition starts.
+Devices default to `mps`. Set `BASAL_DEVICE` and `EMBEDDING_DEVICE` in the root `.env` or process environment to use `cpu` or `cuda`. Unavailable accelerators fail before acquisition starts.
+
+## Settings validation
+
+Precedence: **explicit CLI → process environment → repository-root `.env` → YAML → runtime defaults**. See [`.env.example`](../.env.example) for supported keys. Changing `EMBEDDING_MODEL` also requires `EMBEDDING_REVISION`; Basal revisions remain pinned by supported model name.
+
+Schemas live in `settings.py` under [acquisition](../src/dataset/acquisition/settings.py), [embeddings](../src/dataset/embeddings/settings.py), [extraction/model](../src/dataset/extraction/model/settings.py) and [preprocessing](../src/dataset/preprocessing/settings.py), sharing [dataset.settings.Settings](../src/dataset/settings.py).
