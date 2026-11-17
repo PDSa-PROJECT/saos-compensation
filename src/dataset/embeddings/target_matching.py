@@ -32,18 +32,20 @@ def validate_settings(settings, patterns):
         "batch_size",
         "max_length",
         "minimum_cosine_similarity",
+        "denial_minimum_cosine_similarity",
         "candidate_keywords",
     }
     if not isinstance(settings, dict) or set(settings) != required:
         raise ValueError(f"targets.yaml embedding requires {sorted(required)}")
     validate_encoder_settings(settings)
-    threshold = settings["minimum_cosine_similarity"]
-    if (
-        type(threshold) not in (int, float)
-        or not math.isfinite(threshold)
-        or not 0 <= threshold <= 1
-    ):
-        raise ValueError("minimum_cosine_similarity must be between 0 and 1")
+    for name in ("minimum_cosine_similarity", "denial_minimum_cosine_similarity"):
+        threshold = settings[name]
+        if (
+            type(threshold) not in (int, float)
+            or not math.isfinite(threshold)
+            or not 0 <= threshold <= 1
+        ):
+            raise ValueError(f"{name} must be between 0 and 1")
     keywords = settings["candidate_keywords"]
     # Denial screening uses every sentence, so it has no keyword group.
     keyword_groups = {*TARGET_CLASSES, *EXCLUDED_CLASSES, "shared"}
@@ -215,7 +217,7 @@ class TargetMatcher:
             values = values.masked_fill(values <= cost_values, -1)
             best = int(values.argmax())
             score = float(values[best])
-            if score > self.settings["minimum_cosine_similarity"]:
+            if score > self.settings["denial_minimum_cosine_similarity"]:
                 return {
                     **batch[best], "similarity": score,
                     "pattern": self.patterns[indices[int(patterns[best])]][1],

@@ -13,6 +13,7 @@ SETTINGS = {
     "batch_size": 8,
     "max_length": 128,
     "minimum_cosine_similarity": 0.7,
+    "denial_minimum_cosine_similarity": 0.85,
     "candidate_keywords": {
         "judgment": ["zasądz"],
         "request": ["żąda"],

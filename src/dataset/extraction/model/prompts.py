@@ -2,7 +2,7 @@
 
 
 DEFAULTS = {
-    "version": "saos-extraction-31",
+    "version": "saos-extraction-32",
     "chunk_characters": 6000,
     "context_characters": 600,
     "system_one": {

@@ -5,6 +5,7 @@ import asyncio
 from dataset.extraction import basal_filtering as basal
 from dataset.extraction.model import configuration as config_module
 from dataset.extraction.targets import amounts
+from dataset.extraction.model import decisions
 
 
 def test_prior_payment_feature_is_resolved_for_debug_case_without_target(monkeypatch):
@@ -53,6 +54,28 @@ def test_prior_payment_feature_is_resolved_for_debug_case_without_target(monkeyp
 
     monkeypatch.setattr(amounts, "extract_award", extract_award)
     monkeypatch.setattr(amounts, "extract_prior_payment", prior_payment)
+    async def ask(*args):
+        """Supply an unknown procedural instance.
+
+        args:
+            args: Inference arguments.
+        returns:
+            Instance decision.
+        """
+        return {"instancja": {"choice": "nieustalona", "confidence": 0.9}}
+
+    async def features(*args):
+        """Supply damage evidence independently of target availability.
+
+        args:
+            args: Extraction arguments.
+        returns:
+            Evaluated feature result.
+        """
+        return {"features": {"damage": "Powód doznał urazu."}, "fields_evaluated": True}
+
+    monkeypatch.setattr(decisions, "ask", ask)
+    monkeypatch.setattr(basal, "extract_features", features)
     result = asyncio.run(
         basal.extract(
             None,
@@ -62,6 +85,6 @@ def test_prior_payment_feature_is_resolved_for_debug_case_without_target(monkeyp
         )
     )
     assert result["prior_payment"] == 700
-    assert result["fields_evaluated"] is False
+    assert result["fields_evaluated"] is True
     assert "prior_payment" not in result["award"]
     assert result["award"]["confirmed"] is False

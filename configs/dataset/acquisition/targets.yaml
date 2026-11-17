@@ -5,6 +5,7 @@ embedding:
   batch_size: 64
   max_length: 128 # Longer sentences use all token windows, without dropping the tail.
   minimum_cosine_similarity: 0.7 # Winning score must be strictly greater. If more than one is, highest score wins
+  denial_minimum_cosine_similarity: 0.85 # Full denial uses its own stricter threshold.
 
   # Monetary context stops at the first comma-delimited part containing PLN.
   # Target and exclusion groups compete by similarity; shared stems enable target roles.
@@ -91,6 +92,19 @@ patterns:
   # Exclusion groups compete with target roles before numeric parsing.
   # Checked against every full sentence before monetary selection, without keyword/PLN filters.
   judgment-denial:
+    # List markers and punctuation materially affect embeddings of short rulings.
+    - "1. oddala powództwo,"
+    - "Oddala powództwo;"
+    - "I. oddala powództwa;"
+    - "oddala powództwo"
+    - "oddala powództwa"
+    - "powództwo oddala"
+    - "oddala żądanie pozwu"
+    - "oddala powództwo jako bezzasadne"
+    - "oddala powództwo jako przedawnione"
+    - "oddala roszczenie o zadośćuczynienie"
+    - "oddala żądanie odszkodowania"
+    - "odmawia zasądzenia zadośćuczynienia"
     - "oddala powództwo w całości"
     - "zmienia zaskarżony wyrok w ten sposób że oddala powództwo w całości"
     - "oddala powództwo o zapłatę {amount} tytułem zadośćuczynienia w całości"

@@ -22,6 +22,7 @@ SETTINGS = {
     "batch_size": 8,
     "max_length": 128,
     "minimum_cosine_similarity": 0.7,
+    "denial_minimum_cosine_similarity": 0.85,
     "candidate_keywords": {
         "judgment": ["zasądz"],
         "request": ["żąda"],
@@ -166,8 +167,10 @@ def test_invalid_settings_and_unknown_slots_fail_before_loading():
     returns:
         None.
     """
-    with pytest.raises(ValueError, match="between 0 and 1"):
-        validate_settings({**SETTINGS, "minimum_cosine_similarity": 1.1}, PATTERNS)
+    for name in ("minimum_cosine_similarity", "denial_minimum_cosine_similarity"):
+        for value in (-0.1, 1.1, float("nan"), float("inf"), True, "0.85", None):
+            with pytest.raises(ValueError, match=name):
+                validate_settings({**SETTINGS, name: value}, PATTERNS)
     with pytest.raises(ValueError, match="Unknown"):
         prepare_text("zasądza {unsupported}")
 

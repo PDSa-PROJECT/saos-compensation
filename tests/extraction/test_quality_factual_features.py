@@ -11,31 +11,29 @@ from dataset.extraction.targets import amounts
 
 
 @pytest.mark.parametrize(
-    ("confirmed", "debug", "probability", "continues"),
+    ("confirmed", "debug", "probability"),
     [
-        (False, False, 0.9, False),
-        (True, False, 0.9, True),
-        (False, False, 0.4, False),
-        (False, True, 0.4, True),
-        (False, True, 0.9, True),
+        (False, False, 0.9),
+        (True, False, 0.9),
+        (False, False, 0.4),
+        (False, True, 0.4),
+        (False, True, 0.9),
     ],
 )
-def test_target_is_checked_before_any_feature_inference(
+def test_target_does_not_prevent_feature_inference(
     monkeypatch,
     confirmed,
     debug,
     probability,
-    continues,
 ):
     """
-    Stop rejected targets early and run accepted targets before instance inference.
+    Extract predictors after target selection even when the target is unresolved.
 
     args:
         monkeypatch: Scoped function replacements.
         confirmed: Whether the extracted target meets admission rules.
         debug: Whether low-confidence proposals may be retained.
         probability: Award verification probability.
-        continues: Whether feature inference should run.
 
     returns:
         None.
@@ -65,7 +63,7 @@ def test_target_is_checked_before_any_feature_inference(
 
     async def ask(server, state, questions, config):
         """
-        Check that feature inference follows an accepted target.
+        Check that instance inference follows target selection.
 
         args:
             server: Unused inference server.
@@ -76,19 +74,29 @@ def test_target_is_checked_before_any_feature_inference(
         returns:
             Instance decision.
         """
-        assert continues
         assert events == ["target"]
         assert set(questions) == {"instancja"}
         events.append("instance")
         return {"instancja": {"choice": "nieustalona", "confidence": 0.9}}
 
+    async def features(*args):
+        """Record feature extraction after target selection.
+
+        args:
+            args: Feature extraction arguments.
+
+        returns:
+            Damage feature and evaluation flag.
+        """
+        events.append("features")
+        return {"features": {"damage": "Source damage."}, "fields_evaluated": True}
+
+    monkeypatch.setattr(basal, "extract_features", features)
     monkeypatch.setattr(amounts, "extract_award", extract_award)
     monkeypatch.setattr(decisions, "ask", ask)
     config = config_module.load_config()
-    config["fields"] = {}
     config["api"]["debug"] = debug
     result = asyncio.run(basal.extract(None, "Source judgment.", config, 42))
     assert result["award"] == award
-    assert events == (["target", "instance"] if continues else ["target"])
-    if not continues:
-        assert result == {"id": 42, "award": award}
+    assert events == ["target", "instance", "features"]
+    assert result["fields_evaluated"] is True

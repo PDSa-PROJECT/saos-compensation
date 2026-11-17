@@ -87,7 +87,11 @@ def target_rejection_reason(award, config):
         match = award["target_matches"].get(
             "judgment-denial" if award.get("denied") else "judgment"
         )
-        threshold = config["embedding"]["minimum_cosine_similarity"]
+        threshold = config["embedding"][
+            "denial_minimum_cosine_similarity"
+            if award.get("denied")
+            else "minimum_cosine_similarity"
+        ]
         if match is None or match["similarity"] <= threshold:
             return f"no judgment sentence with cosine similarity > {threshold}"
         if not award.get("confirmed"):

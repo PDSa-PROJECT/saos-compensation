@@ -61,7 +61,7 @@ def make_matcher(scores, batch_size=2):
         Matcher, controlled encoder and CPU configuration.
     """
     config = load_config()
-    config["embedding"].update(device="cpu", batch_size=batch_size)
+    config["embedding"].update(device="cpu", batch_size=batch_size, denial_minimum_cosine_similarity=0.7)
     assert next(iter(config["target_patterns"])) == "judgment-denial"
     encoder = Encoder(scores)
     matcher = target_matching.TargetMatcher(
@@ -72,7 +72,7 @@ def make_matcher(scores, batch_size=2):
 
 @pytest.mark.parametrize(
     "score,threshold,denied",
-    [(0.69, 0.7, False), (0.7, 0.7, False), (0.71, 0.7, True), (0.9, 0.95, False)],
+    [(0.69, 0.7, False), (0.7, 0.7, False), (0.71, 0.7, True), (0.85, 0.85, False), (0.8501, 0.85, True), (0.9, 0.95, False)],
 )
 def test_denial_uses_strict_configured_similarity_threshold(score, threshold, denied):
     """Reject only similarities strictly exceeding the configured minimum.
@@ -87,7 +87,7 @@ def test_denial_uses_strict_configured_similarity_threshold(score, threshold, de
     """
     text = "Oddala powództwo w całości."
     matcher, _, _ = make_matcher({text: score})
-    matcher.settings["minimum_cosine_similarity"] = threshold
+    matcher.settings["denial_minimum_cosine_similarity"] = threshold
     result = matcher.match_denial(text)
     assert (result is not None) is denied
     if denied:
@@ -200,7 +200,7 @@ def test_cost_match_blocks_denial_on_equal_or_higher_similarity(cost_score, deni
     """
     text = "Po rozliczeniu wzajemnym zasądza od powódki 470,50 zł na korzyść pozwanego."
     config = load_config()
-    config["embedding"].update(device="cpu", minimum_cosine_similarity=0.6)
+    config["embedding"].update(device="cpu", denial_minimum_cosine_similarity=0.6)
     encoder = Encoder({text: 0.7}, {text: cost_score})
     matcher = target_matching.TargetMatcher(config["embedding"], config["target_patterns"], encoder)
     assert (matcher.match_denial(text) is not None) is denial_expected
@@ -218,7 +218,7 @@ def test_cost_veto_does_not_hide_another_denial_in_the_same_batch():
     cost = "Po rozliczeniu wzajemnym zasądza od powódki 470,50 zł."
     denial = "Oddala powództwo w całości."
     config = load_config()
-    config["embedding"].update(device="cpu", batch_size=2, minimum_cosine_similarity=0.6)
+    config["embedding"].update(device="cpu", batch_size=2, denial_minimum_cosine_similarity=0.6)
     encoder = Encoder({cost: 0.7, denial: 0.69}, {cost: 0.71})
     matcher = target_matching.TargetMatcher(config["embedding"], config["target_patterns"], encoder)
     assert matcher.match_denial(cost + "\n" + denial)["text"] == denial
