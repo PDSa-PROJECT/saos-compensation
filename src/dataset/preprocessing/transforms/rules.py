@@ -5,6 +5,7 @@ FIELD_RULES = {
     "judgment_year": {"type": "numeric", "transform": "year_digits", "scaling": "none", "missing": "error"},
     "injured_party_count": {"type": "numeric", "transform": "identity", "scaling": "none", "missing": "error"},
     "prior_payment": {"type": "numeric", "transform": "log1p", "scaling": "robust", "missing": "error"},
+    "court_type": {"type": "categorical", "unknown": "ignore"},
     "instance": {"type": "categorical", "unknown": "ignore"},
     "court_locality_size": {"type": "categorical", "unknown": "ignore"},
 }

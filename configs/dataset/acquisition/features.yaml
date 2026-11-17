@@ -1,6 +1,7 @@
 metadata_fields:
 - judgment_year
-- instance
+- court_type # SAOS court level: DISTRICT, REGIONAL or APPEAL.
+- instance # Additional procedural-stage estimate from Basal.
 - prior_payment # Earlier principal paid in PLN, rounded to int; 0 without confirmation.
 - injured_party_count # Explicit recipients; defaults to 1 when unavailable.
 - court_locality_size # Population class of the court locality (GUGiK).

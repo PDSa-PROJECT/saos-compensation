@@ -47,7 +47,7 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
     config = config_module.load_config()
     config["api"]["debug"] = debug
     config["api"]["max_gib"] = 0
-    config["metadata_fields"] = ["judgment_year", "instance", "court_seat"]
+    config["metadata_fields"] = ["judgment_year", "court_type", "instance", "court_seat"]
     config["system_one"]["device"] = "cpu"
     config["embedding"]["device"] = "cpu"
     async def extract(text, identifier):
@@ -116,6 +116,7 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
         **{field: "not_available" for field in config["fields"]},
         text_field: "Opis.",
         "judgment_year": 2020,
+        "court_type": "REGIONAL",
         "instance": "pierwsza",
         "court_seat": "Płocku",
     }

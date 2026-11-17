@@ -80,7 +80,7 @@ def record_source():
             "text": "Opis.",
             "source_payload": {"id": 42},
             "judgmentDate": "2020-05-12",
-            "division": {"court": {"name": "Sąd Okręgowy w Płocku"}},
+            "division": {"court": {"name": "Sąd Okręgowy w Płocku", "type": "REGIONAL"}},
         }
 
     return record_source

@@ -38,3 +38,28 @@ def test_changed_question_invalidates_checkpoint(
     changed = configuration.load_config(config_directory)
     with pytest.raises(ValueError, match="Extraction settings changed"):
         checkpoints.load_checkpoint(changed)
+
+
+def test_adding_court_type_requires_a_new_dataset_directory(monkeypatch, tmp_path):
+    """Reject resuming a dataset whose records were configured without court type.
+
+    args:
+        monkeypatch: Scoped checkpoint output root replacement.
+        tmp_path: Isolated dataset directory.
+
+    returns:
+        None.
+    """
+    from copy import deepcopy
+
+    from dataset.storage import checkpoints
+
+    config = configuration.load_config()
+    previous = deepcopy(config)
+    previous["metadata_fields"].remove("court_type")
+    monkeypatch.setattr(checkpoints, "ROOT", tmp_path)
+    checkpoint = checkpoints.load_checkpoint(previous)
+    checkpoints.save_checkpoint(tmp_path / config["api"]["download_path"], checkpoint)
+    assert checkpoints.load_checkpoint(previous) == checkpoint
+    with pytest.raises(ValueError, match="Extraction settings changed"):
+        checkpoints.load_checkpoint(config)

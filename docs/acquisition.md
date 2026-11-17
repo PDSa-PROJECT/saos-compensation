@@ -22,6 +22,8 @@ Before monetary target selection, every full sentence is compared with the confi
 
 Debug adds only `source.txt` and `model_calls.json`; evidence and confidence diagnostics stay out of the two basic files. Rejected cases leave no final case files. Existing artifacts are preserved, so use a fresh output path for a clean dataset layout. Operational summaries are printed to the console.
 
+`court_type` is copied directly from validated SAOS `division.court.type` (`DISTRICT`, `REGIONAL`, `APPEAL`) and is selected by default alongside the additional Basal-derived `instance`. Court type is not inferred by the model. Adding it changes the checkpoint configuration signature, so datasets configured without it require a separate output directory; existing records are not rewritten.
+
 ## Resume and storage limits
 
 Restart the same command after interruption. `checkpoint.json` pins the original date bounds, extraction configuration and locality snapshot hash, and records the next page/item. Saved records are recognized without repeating extraction. Temporary `<SAOS_ID>/pending/` state preserves source/configuration and completed model decisions even with debug disabled; it is removed after acceptance or rejection.

@@ -71,6 +71,7 @@ DEFAULTS = {
 
 METADATA_FIELDS = (
     "judgment_year",
+    "court_type",
     "instance",
     "court_seat",
     "court_locality_size",

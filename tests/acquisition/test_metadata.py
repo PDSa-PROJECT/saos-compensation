@@ -113,3 +113,30 @@ def test_population_feature_uses_official_match_and_preserves_provenance():
     )
     assert result["features"] == {"court_locality_size": "city_at_least_500000"}
     assert result["metadata_sources"]["court_locality_size"]["locality"] == row
+
+
+@pytest.mark.parametrize("court_type", ["DISTRICT", "REGIONAL", "APPEAL"])
+def test_court_type_comes_from_saos_independently_of_instance(court_type):
+    """Preserve the API court level without deriving it from the procedural stage.
+
+    args:
+        court_type: Validated court type supplied by SAOS.
+
+    returns:
+        None.
+    """
+    result = {
+        "features": {}, "field_status": {}, "evidence": {}, "confidence": {},
+        "instance": {"value": "brak informacji", "decision": {"confidence": 0.4}},
+    }
+    record = {
+        "judgmentDate": "2020-01-01",
+        "division": {"court": {"name": "Sąd w Warszawie", "type": court_type}},
+    }
+    add_metadata_features(result, record, ["court_type", "instance"])
+    assert result["features"] == {"court_type": court_type, "instance": "not_available"}
+    assert result["metadata_sources"]["court_type"] == {
+        "field": "division.court.type", "value": court_type,
+    }
+    assert result["confidence"]["court_type"] is None
+    assert result["field_status"]["court_type"] == "read from SAOS metadata"

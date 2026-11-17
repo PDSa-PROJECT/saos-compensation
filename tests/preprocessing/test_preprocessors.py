@@ -416,3 +416,38 @@ def test_previous_package_artifacts_remain_loadable(tmp_path, kind):
             restored.inverse_transform(restored.transform([100, 200])), [100, 200]
         )
     assert path.read_bytes() == content
+
+
+def test_court_type_and_instance_have_independent_categorical_blocks(tmp_path):
+    """Encode API court types separately from instance and preserve fitted columns on load.
+
+    args:
+        tmp_path: Isolated fitted-artifact directory.
+
+    returns:
+        None.
+    """
+    selection = {"feature_fields": ["court_type", "instance"]}
+    records = [
+        {"court_type": "DISTRICT", "instance": "pierwsza"},
+        {"court_type": "REGIONAL", "instance": "pierwsza"},
+        {"court_type": "REGIONAL", "instance": "druga"},
+        {"court_type": "APPEAL", "instance": "druga"},
+    ]
+    model = FeaturePreprocessor().fit(records, selection)
+    batch = model.transform(records, ["1", "2", "3", "4"])
+    assert batch["field_columns"] == {"court_type": [0, 4], "instance": [4, 7]}
+    assert batch["columns"][:4] == [
+        "court_type=APPEAL", "court_type=DISTRICT", "court_type=REGIONAL", "court_type=not_available",
+    ]
+    np.testing.assert_array_equal(batch["X"][:, :4], [
+        [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0],
+    ])
+    np.testing.assert_array_equal(batch["X"][1, :4], batch["X"][2, :4])
+    assert not np.array_equal(batch["X"][1, 4:], batch["X"][2, 4:])
+    path = tmp_path / "features.pkl"
+    model.save(path)
+    restored = FeaturePreprocessor.load(path, settings=selection)
+    np.testing.assert_array_equal(restored.transform(records, ["1", "2", "3", "4"])["X"], batch["X"])
+    with pytest.raises(ValueError, match="selected field: court_type"):
+        restored.transform([{"instance": "pierwsza"}], ["old"])
