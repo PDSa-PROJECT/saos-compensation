@@ -6,9 +6,9 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
-Added independent context_words_before/context_words_after in processing targets.yaml on feat/configurable-amount-context, branched from the latest fix/extraction-amount-contexts. Defaults remain 5/5, zero disables one side, and oversized limits stop at source boundaries. Strict typed validation rejects invalid counts; both matching and preliminary operative screening use the configured values. Context changes invalidate incompatible processing checkpoints.
+Added independent context_words_before/context_words_after in processing targets.yaml on feat/configurable-amount-context, branched from the latest fix/extraction-amount-contexts. Defaults remain 5/5, zero disables one side, and oversized limits stop at source boundaries. Strict typed validation rejects invalid counts; both matching and preliminary operative screening use the configured values. Context changes invalidate incompatible processing checkpoints. Published as PR #70 targeting fix/extraction-amount-contexts, assigned to Marcin-Brzykcy with review requested.
 
-PRs #66, #67 and #68 now belong to native GitHub stack #69, targeting main in that order. Independent API reads confirm positions 1/3, 2/3 and 3/3. Previously only base branches formed a chain; stack membership was missing. No source behavior or branch history changed during stack registration.
+PRs #66, #67, #68 and #70 belong to native GitHub stack #69, targeting main in that order. The new configurable-context PR #70 is verified as position 4/4 with base fix/extraction-amount-contexts. Stack membership is registered through the native API, separately from branch ancestry. No PR has been merged.
 
 Opened PR #68 from fix/extraction-amount-contexts to split-download-processing (#67), following documentation review #66. All three branches include merged main/settings #64 and preserve separate review scopes; no PR was merged. Combined validation: 547 passed, five skipped; Ruff passed. GitHub checks are pending.
 
@@ -88,8 +88,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-10: Published a five-layer PR stack preserving published history: preprocessing (#49), target-search (#48), acquisition-structure (#53), target-patterns (#54) and the final version-29 matcher (#55) on acquisition-rebuild. Resolved final matcher/version/documentation conflicts by retaining the first-monetary-prefix policy and replaced obsolete right/left growth tests with the current prefix regressions. Intermediate full offline suites passed: preprocessing 451, target-search 474, acquisition-structure 487 and target-patterns 501; final integration passed 493 tests with four skips. Existing datasets, model caches, checkpoints and local review notes were preserved. Updated all PR descriptions with stack order and merge instructions. GitHub readiness checks found passing CI, mergeable bases and no unresolved review threads for all five PRs. No main merge, auto-merge enrollment or force-push was performed.
 
 - 2026-11-10: Created and switched to feature/target-extraction from the latest stack layer, refactor/acquisition-rebuild at 9c01489. Confirmed saos-extraction-29 is active. The new branch includes all five PR layers and is the base for further extraction work. No runtime changes, commits, pushes or test runs were performed for this branch setup.
 
@@ -188,3 +186,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-17: Registered native GitHub stack #69 with ordered PRs [66, 67, 68] after confirming all had stack=null despite correct chained bases. Independently verified each membership/position and the stack base main. No merge, auto-merge, rebase or source changes; runtime tests were not repeated for metadata-only organization.
 
 - 2026-11-17: Added required nonnegative integer context_words_before and context_words_after under targets.yaml embedding, preserving the current 5/5 defaults and allowing asymmetric or zero context. Propagated both fields through monetary matching and preliminary operative screening without changing encoder settings, model revision or amount/source offsets. Added YAML validation, actual encoder-input, short-sentence/boundary, asymmetric/zero and checkpoint compatibility tests. Updated PROJECT and configuration/output guides. Validation: 566 tests passed, five skipped; source Ruff and whitespace checks passed. Changes are on feat/configurable-amount-context stacked from fix/extraction-amount-contexts; existing datasets were not rewritten and no model inference was rerun.
+
+- 2026-11-17: Opened PR #70 from feat/configurable-amount-context into fix/extraction-amount-contexts after #68. Assigned Marcin-Brzykcy and requested his review. Appended #70 to native stack #69 and independently verified order [66, 67, 68, 70], position 4/4, base/head refs and assignment/reviewer. The implementation commit is 9f331dd; its 566-passed/five-skipped validation remains unchanged. No merge or protection changes.
