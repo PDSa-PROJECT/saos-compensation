@@ -12,6 +12,12 @@ Processing `run(config, *, extractor=None, record_source=None)` accepts keyword-
 
 These are ordinary module boundaries and explicit dependencies; no container or interface hierarchy is required.
 
+## Installed commands
+
+`pyproject.toml` registers `get-raw-data = "dataset.cli.main:main"` and `process-data = "dataset.cli.process:main"`. After switching branches that change these entry points, repeat the platform-specific `uv sync --locked` command from [Setup](../README.md#setup). `uv run --no-sync` uses the existing installation and does not regenerate console scripts.
+
+The current src layout generates package metadata under `src/`. Obsolete root-level `saos_compensation.egg-info` from earlier installs can shadow the installed entry-point metadata; preserve that old directory outside the checkout before inspecting the refreshed installation.
+
 ## Checks
 
 After syncing the test group:

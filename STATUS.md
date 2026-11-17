@@ -6,6 +6,8 @@ Maintain a concise record of completed work, findings, and outstanding tasks. Af
 
 ## Summary
 
+Verified PR #67 entry points in the primary checkout and refreshed the editable installation from the lockfile: get-raw-data and process-data are registered and callable, with the old get-data script absent. Documented installation refresh after branch switches and obsolete flat-layout metadata. Validation: 18 CLI tests passed and installed metadata matches pyproject.toml. Runtime extraction code is unchanged.
+
 Opened chained PR #67 from split-download-processing into docs/dataset-correctness-review, following PR #66, and assigned Marcin-Brzykcy. Verified the open PR head, base and assignee. No merge was requested.
 
 Clarified the separate debug contracts in the README download/processing sections and the configuration/output guides: raw debug affects per-page console progress only; processing debug adds source/model-call files and permits eligible invalid targets while preserving damage, source and leakage checks. Both modes retain resumable progress, existing artifacts are preserved, and training requires valid=true. Documentation only; runtime behavior is unchanged.
@@ -54,8 +56,6 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - Compare a fixed Polish model against the labeled feature sample before selecting it.
 
 ## Log
-
-- 2026-11-08: Verified ignored/untracked paths before publishing the refactor/target-search ignore fix. Removed notebooks/.gitkeep and notebooks/01_saos_feasibility.py from the index only because this branch ignores the entire notebooks directory; retained both files locally. Refreshed origin/main and found its newer merged acquisition implementation already ignores caches with placeholders. Main receives a separate rule-order correction so cache __init__.py files cannot escape ignoring. Verified no cache files are tracked; no application code or runtime tests changed.
 
 - 2026-11-08: Integrated current main into refactor/target-search to bring in the acquisition and target-matching implementation before changing sentence growth. Resolved the STATUS conflict by retaining the current implementation summary and both branches latest log entries. Kept main cache/placeholder ignore rules and preserved local notebook/model files. Baseline offline validation passed: 415 tests, three skipped. Target selection behavior is unchanged in this merge.
 
@@ -154,3 +154,5 @@ Tests validate behavior with controlled inputs rather than pinning experiment se
 - 2026-11-17: Clarified debug and no-debug behavior for both entry points in their README argument sections and the corresponding configuration/output documentation. Documented always-saved raw JSON/checkpoints, final console summaries, processing diagnostic files, valid=false eligibility, required damage evidence and active validation, normal case files, pending-state persistence and training selection. Checked statements against download, processing and record-writing code; local Markdown links and whitespace validation passed. No runtime changes or test rerun.
 
 - 2026-11-17: Opened PR #67 for the raw-download/local-processing split with docs/dataset-correctness-review as its base, following #66. Confirmed the published branch was two commits ahead with no missing base commits and no existing open PR for the head. Assigned Marcin-Brzykcy and verified the open PR refs and assignment. Application behavior and prior validation are unchanged; no test rerun or merge.
+
+- 2026-11-17: Verified the current PR #67 branch in the primary checkout exposes get-raw-data and process-data in pyproject.toml. Refreshed the existing macOS/test environment with uv sync --locked, preserved obsolete root-level flat-layout metadata outside the checkout, and checked installed console metadata and absence of get-data. Documented the required installation refresh after entry-point changes. Validation: 18 CLI tests passed; whitespace and documentation links passed. No full extraction or inference run; local configuration edits remain outside this commit.
