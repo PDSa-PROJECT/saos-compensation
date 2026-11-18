@@ -36,6 +36,7 @@ def select_facts(diagnostics, threshold, maximum_leak):
                 bool(api.CURRENCY.search(row["text"])),
                 "source sentence contains currency",
             ),
+            (bool(api.EVIDENCE_MARKER.search(row["text"])), "evidence marker instead of factual description"),
             (not any(char.isalpha() for char in row["text"]), "no descriptive text"),
             (
                 row["text"].rstrip().endswith(":"),
@@ -110,6 +111,8 @@ async def extract_features(server, text, config, identifier):
         Features, source evidence and model diagnostics with deliberate missing values.
     """
     fields = config["fields"]
+    subjects = config.get("beneficiaries", [])
+    subject_instructions = " Osoby objęte świadczeniem: " + "; ".join(subjects) + ". Opisuj tylko ich własną szkodę." if subjects else ""
     threshold = config["system_one"]["minimum_probability"]
     selected = feature_input(text, config)
     descriptions = {field: "brak informacji" for field in fields}
@@ -155,7 +158,7 @@ async def extract_features(server, text, config, identifier):
                         "schema": schema,
                         "instructions": config["questions"]["extraction"][
                             "instructions"
-                        ],
+                        ] + subject_instructions,
                     }
                 },
                 config,
@@ -166,6 +169,9 @@ async def extract_features(server, text, config, identifier):
             answer, mapping, fields, threshold
         )
         for field in fields:
+            if quotes[field] and api.EVIDENCE_MARKER.search(values[field]):
+                statuses[field] = "extracted description rejected: evidence marker"
+                continue
             if quotes[field] and api.CURRENCY.search(values[field]):
                 statuses[field] = (
                     "extracted description rejected: source sentence contains currency"
@@ -195,6 +201,7 @@ async def extract_features(server, text, config, identifier):
                 context = config["context_characters"]
                 state = {
                     "oceniany_fragment": value,
+                    "osoby_objęte_świadczeniem": subjects,
                     "poprzedzajacy_kontekst": text[max(0, start - context) : start],
                     "nastepujacy_kontekst": text[end : end + context],
                 }
@@ -204,8 +211,8 @@ async def extract_features(server, text, config, identifier):
                     **{
                         f"fit_{name}": {
                             "type": "noul",
-                            "instructions": "Czy oceniany fragment odpowiada na pytanie: "
-                            + fields[name],
+                            "instructions": ("Oceń zgodność tylko dla wskazanych osób objętych świadczeniem. Zachowaj numery w nawiasach przy inicjałach. " if subjects else "")
+                            + "Czy oceniany fragment odpowiada na pytanie: " + fields[name],
                         }
                         for name in sorted(span_fields[start, end])
                     },

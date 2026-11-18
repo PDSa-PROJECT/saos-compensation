@@ -113,3 +113,23 @@ def test_population_feature_uses_official_match_and_preserves_provenance():
     )
     assert result["features"] == {"court_locality_size": "city_at_least_500000"}
     assert result["metadata_sources"]["court_locality_size"]["locality"] == row
+
+
+def test_court_type_is_read_directly_from_saos_and_remains_distinct_from_instance():
+    """Preserve official court category without using it to guess procedural instance.
+
+    args:
+        None.
+
+    returns:
+        None.
+    """
+    from dataset.preprocessing import FeaturePreprocessor
+
+    result = {"instance": {"value": "nieustalona", "decision": {"confidence": 0.0}}, "features": {}, "evidence": {}, "confidence": {}, "field_status": {}}
+    record = {"judgmentDate": "2020-05-12", "division": {"court": {"name": "Sąd Okręgowy w Warszawie", "type": "REGIONAL"}}}
+    add_metadata_features(result, record, ["court_type"])
+    assert result["features"] == {"court_type": "REGIONAL"}
+    assert result["metadata_sources"]["court_type"]["field"] == "division.court.type"
+    encoder = FeaturePreprocessor().fit([result["features"]], {"feature_fields": ["court_type"]})
+    assert "court_type=REGIONAL" in encoder.transform([result["features"]], ["1"])["columns"]

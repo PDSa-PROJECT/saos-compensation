@@ -48,11 +48,30 @@ DEFAULTS = {
         },
         "extraction": {
             "instructions": "Dla każdego pola wybierz fragment źródła odpowiadający na jego pytanie. "
-            "Zachowaj negacje, osobę i czas. Nie dopisuj faktów. Opisuj poszkodowanego. "
+            "Zachowaj negacje, osobę i czas. Nie dopisuj faktów. Opisuj osoby dochodzące "
+            "świadczenia w bieżącej sprawie. Rozróżniaj oznaczenia osób, również numery "
+            "w nawiasach przy takich samych inicjałach. Nie przypisuj powodowi obrażeń "
+            "jego dziecka lub innej osoby. Przy kilku powodach uwzględnij ich własne szkody, "
+            "bez domyślania brakujących opisów. Same wskazania dowodów, przesłuchań "
+            "i słowo Bezsporne nie opisują szkody. "
             "Pomiń kwoty, wynik sprawy i uzasadnienie wysokości świadczenia. "
             "Nie kopiuj fragmentu do pola, na którego pytanie nie odpowiada. "
             "Jeśli brak odpowiedzi, wybierz not stated.",
             "field_suffix": "",
+        },
+        "prior_payment": {
+            "instructions": "Czy wskazana oceniana_kwota jest kwotą świadczenia głównego faktycznie "
+            "wypłaconą przed bieżącym wyrokiem osobom wskazanym jako beneficjenci? "
+            "Oceniaj tylko tę konkretną liczbę w podanym fragmencie, nawet jeżeli są inne kwoty. "
+            "Ma to być łączne wcześniejsze świadczenie dla wszystkich wskazanych beneficjentów. "
+            "Jeżeli fragment dotyczy tylko jednego z kilku beneficjentów, pojedynczego "
+            "składnika lub dopłaty bez łącznej sumy, odpowiedz nie. "
+            "Nie uznawaj za wypłatę żądania, kwoty dopiero zasądzonej, samego przyznania "
+            "świadczenia bez potwierdzenia zapłaty, pozostałego salda, odsetek, kosztów "
+            "ani zapłaty na rzecz innej osoby. Przy wypłacie na osobę musi być jawna "
+            "liczba uprawnionych, a oceniana_kwota ma oznaczać ich łączne wcześniejsze "
+            "świadczenie. Nie sumuj ani nie przeliczaj kwot. Jeśli nie można tego "
+            "potwierdzić, odpowiedz nie."
         },
         "instance": {
             "instructions": "W której instancji zapadł ten wyrok? Wymagaj informacji o etapie "
@@ -71,6 +90,7 @@ DEFAULTS = {
 
 METADATA_FIELDS = (
     "judgment_year",
+    "court_type",
     "instance",
     "court_seat",
     "court_locality_size",

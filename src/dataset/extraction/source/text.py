@@ -78,12 +78,16 @@ def extract_text(html):
     return "\n".join(line for line in lines if line)
 
 
+EVIDENCE_MARKER = re.compile(
+    r"^(?:(?:bezsporne|okoliczność bezsporna)\s*[.!]?$|(?:dowód|dowody)\s*:)",
+    re.IGNORECASE,
+)
 REASONS = re.compile(r"^UZASADNIENIE\s*$", re.IGNORECASE | re.MULTILINE)
 PLN_UNIT = r"(?:PLN|zł|złot(?:y|ego|emu|ym|e|ych|ymi)|złotówk(?:a|i|ę|ą|o|om|ami|ach)|złotówek|złotówce)"
 CURRENCY = re.compile(rf"\b{PLN_UNIT}\b", re.IGNORECASE)
 
 AMOUNT_NUMBER = (
-    r"(?:[0-9]{1,3}(?:[ .\u00a0\u202f][0-9]{3})+|[0-9]+)"
+    r"(?:[0-9]{1,3}(?:(?:[ \u00a0\u202f]|\.[ \u00a0\u202f]*)[0-9]{3})+|[0-9]+)"
     r"(?:,[0-9]+)?"
 )
 AMOUNT_SCALE = (
@@ -105,9 +109,7 @@ MONEY = re.compile(
     """
     + AMOUNT_NUMBER
     + rf"(?:\s*{AMOUNT_SCALE}(?:\s+{AMOUNT_NUMBER}(?:\s*{AMOUNT_SCALE})?)*)?"
-    + r")\s*(?:\([^()\n]{1,200}\)\s*)?"
-    + PLN_UNIT
-    + r"\b",
+    + rf")\s*(?:(?:\([^()\n]{{1,200}}\)\s*)?{PLN_UNIT}\b|\([^()\n]{{1,200}}{PLN_UNIT}\b\s*\))",
     re.IGNORECASE | re.VERBOSE,
 )
 

@@ -175,7 +175,7 @@ def test_metadata_and_unselected_text_do_not_satisfy_admission():
     assert feature_rejection_reason(result, {"fields": {"cause": "Cause"}}) is not None
 
 
-@pytest.mark.parametrize(("similarity", "accepted"), [(0.7, False), (0.7001, True)])
+@pytest.mark.parametrize(("similarity", "accepted"), [(0.85, False), (0.8501, True)])
 def test_target_admission_uses_strict_cosine_threshold(similarity, accepted):
     """
     Apply the same strict similarity boundary during matching and target admission.
@@ -211,7 +211,7 @@ def test_target_parse_failure_reports_status_without_model_probability():
     from dataset.extraction.quality import target_rejection_reason
 
     award = {
-        "target_matches": {"judgment": {"similarity": 0.85}},
+        "target_matches": {"judgment": {"similarity": 0.9}},
         "confirmed": False,
         "status": "selected judgment sentence requires exactly one numeric PLN amount",
     }

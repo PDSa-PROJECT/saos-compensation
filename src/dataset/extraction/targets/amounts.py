@@ -1,5 +1,7 @@
 """Monetary contexts, award verification and earlier-payment extraction."""
 
+import re
+
 from ..model import decisions
 from ..source import text as api
 from ..source.passages import fragments
@@ -112,45 +114,34 @@ async def extract_prior_payment(server, match, config):
 
     if match is None:
         return 0
-    answer = (
-        await decisions.ask(
-            server,
-            match["text"],
-            {
-                "prior_payment": {
-                    "type": "extract",
-                    "instructions": "Wskaż kwotę świadczenia głównego już wypłaconą poszkodowanym "
-                    "przez pozwanego lub ubezpieczyciela przed analizowanym wyrokiem. "
-                    "Nie wybieraj kwoty żądanej, zasądzonej, pozostałej do zapłaty, odsetek "
-                    "ani kosztów postępowania. Wskaż wyłącznie liczbową kwotę wraz z walutą "
-                    "jako dokładny fragment źródła. Jeśli podano składniki i ich sumę, wybierz "
-                    "tylko sumę. Gdy jest kilka odrębnych wypłat bez jednoznacznej sumy "
-                    "lub inny odbiorca niż poszkodowani w tej sprawie, wybierz not stated.",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "amount": {
-                                "type": "string",
-                                "description": "Wcześniej wypłacona kwota główna z walutą PLN.",
-                            }
-                        },
-                    },
-                }
-            },
-            config,
-        )
-    )["prior_payment"]
-    value = answer["data"]["amount"]
-    probability = answer["fields"]["amount"].get("confidence")
-    if (
-        value is None
-        or probability is None
-        or probability < config["system_one"]["amount_minimum_probability"]
-    ):
+    sentence = match.get("sentence", match)
+    source = sentence["text"]
+    if "amount_start" in match:
+        start = match["amount_start"] - sentence["start"]
+        end = match["amount_end"] - sentence["start"]
+        if not 0 <= start < end <= len(source):
+            raise ValueError("Prior-payment amount lies outside its source context")
+        amount = api.MONEY.fullmatch(source[start:end])
+        if amount is None:
+            raise ValueError("Prior-payment amount does not match its source")
+    else:
+        amounts = list(api.MONEY.finditer(source))
+        if len(amounts) != 1:
+            return 0
+        amount = amounts[0]
+        start = amount.start()
+    prefix = " ".join(source[:start].split()[-5:])
+    if re.search(r"\b(?:ponadto|dodatkowo|kolejn)\w*", prefix, re.I) and not re.search(r"łącznie|w sumie|suma", source, re.I):
+        print("Prior-payment component has no explicit combined total; retaining the unconfirmed fallback.", flush=True)
         return 0
-    amount = api.MONEY.fullmatch(value.strip())
-    if amount is None:
+    value = api.amount_in_pln(amount)
+    answer = (await decisions.ask(
+        server,
+        {"oceniana_kwota": value, "fragment": source, "beneficjenci": match.get("beneficiaries", [])},
+        {"prior_payment": {"type": "noul", **config["questions"]["prior_payment"]}},
+        config,
+    ))["prior_payment"]
+    probability = answer.get("noul")
+    if probability is None or probability < config["system_one"]["amount_minimum_probability"]:
         return 0
-    return int(
-        Decimal(api.amount_in_pln(amount)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
-    )
+    return int(Decimal(value).quantize(Decimal(1), rounding=ROUND_HALF_UP))

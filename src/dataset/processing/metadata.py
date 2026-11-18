@@ -26,6 +26,8 @@ def add_metadata_features(result, record, fields, localities=None):
         else result["instance"]["value"],
         "court_seat": locality[1].strip() if locality else "not_available",
     }
+    if "court_type" in fields:
+        values["court_type"] = court["type"]
     if "injured_party_count" in fields:
         count = result["award"].get("injured_party_count")
         values["injured_party_count"] = (
@@ -48,6 +50,8 @@ def add_metadata_features(result, record, fields, localities=None):
         "instance": result["instance"],
         "court_seat": {"field": "division.court", "value": court},
     }
+    if "court_type" in fields:
+        sources["court_type"] = {"field": "division.court.type", "value": court["type"]}
     if "court_locality_size" in fields:
         sources["court_locality_size"] = {
             "locality": matched,
@@ -58,11 +62,11 @@ def add_metadata_features(result, record, fields, localities=None):
         sources["injured_party_count"] = {
             "source": "defaulted to one; recipient count unavailable"
             if count in (None, "not_available", "brak informacji")
-            else "explicit recipients in the embedding-selected judgment sentence"
+            else "distinct explicit recipients in the accepted operative clauses"
         }
     if "prior_payment" in fields:
         sources["prior_payment"] = {
-            "source": "embedding-selected prior payment; Basal amount extraction"
+            "source": "embedding-selected amount; Basal confirms earlier-payment role"
         }
     result["metadata_sources"] = {field: sources[field] for field in fields}
     for field in fields:

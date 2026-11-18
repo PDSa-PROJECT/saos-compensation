@@ -80,7 +80,11 @@ def recipient_group(text):
     returns:
         Recipient list without role prefixes, or None when not explicit.
     """
-    match = re.search(r"na rzecz\s+(.+?)\s+(?:kwot[ęy]|tytułem|nawiązkę|odszkodowanie|zadośćuczynienie)\b", text, re.IGNORECASE)
+    amount = MONEY.search(text)
+    prefix = text[:amount.start()] if amount else text
+    match = re.search(r"na rzecz\s+(.+?)(?=\s+(?:kwot[ęy]|tytułem|nawiązkę|odszkodowanie|zadośćuczynienie|po)\b|$)", prefix, re.IGNORECASE)
+    if not match and amount is not None:
+        match = re.search(r"na rzecz\s+(.+?)(?=[,;]|\s+(?:tytułem|wraz)\b|$)", text[amount.end():], re.I)
     if not match:
         return None
     return re.sub(
@@ -120,6 +124,9 @@ async def extract_targets(server, text, config):
         "target_matches": matches,
         "status": "no matching judgment sentence",
     }
+    if matches.get("excluded_reason"):
+        result.update(excluded=True, status=matches["excluded_reason"])
+        return result
     denial = matches.get("judgment-denial")
     if denial is not None:
         if text[denial["start"]:denial["end"]] != denial["text"]:
@@ -132,28 +139,58 @@ async def extract_targets(server, text, config):
     if selected["similarity"] <= config["embedding"]["minimum_cosine_similarity"]:
         result["status"] = "judgment sentence below the similarity threshold"
         return result
-    sentence = selected["text"]
-    if text[selected["start"] : selected["end"]] != sentence:
-        raise ValueError("Selected judgment sentence does not match its source")
-    amounts = list(MONEY.finditer(sentence))
-    if len(amounts) != 1:
-        result["status"] = (
-            "selected judgment sentence requires exactly one numeric PLN amount"
-        )
-        return result
-    amount = amounts[0]
-    total = Decimal(amount_in_pln(amount))
-    group = recipient_group(sentence)
-    count = count_people(group) if group else None
-    result["injured_party_count"] = count if count is not None else "not_available"
-    if re.search(r"\bpo\s*$", sentence[: amount.start()], re.IGNORECASE):
-        if count is None:
-            result["status"] = "per-person award has an unresolved beneficiary group"
+    awards = selected.get("awards", [selected])
+    total = Decimal(0)
+    recipients = set()
+    counts = []
+    seen = set()
+    for award in awards:
+        if text[award["start"]:award["end"]] != award["text"]:
+            raise ValueError("Selected judgment sentence does not match its source")
+        context = award.get("sentence", award)
+        if text[context["start"]:context["end"]] != context["text"]:
+            raise ValueError("Selected judgment context does not match its source")
+        if award["similarity"] <= config["embedding"]["minimum_cosine_similarity"]:
+            result["status"] = "judgment amount below the similarity threshold"
             return result
-        total *= count
+        sentence = context["text"]
+        if "amount_start" in award:
+            start, end = award["amount_start"], award["amount_end"]
+            if not award["start"] <= start < end <= award["end"]:
+                raise ValueError("Selected amount lies outside its source window")
+            amount = MONEY.fullmatch(text[start:end])
+            if amount is None:
+                raise ValueError("Selected amount does not match its source")
+            key = (start, end)
+            prefix = text[award.get("sentence", award)["start"]:start]
+        else:
+            amounts = list(MONEY.finditer(sentence))
+            if len(amounts) != 1:
+                result["status"] = "selected judgment sentence requires exactly one numeric PLN amount"
+                return result
+            amount = amounts[0]
+            key = (award["start"] + amount.start(), award["start"] + amount.end())
+            prefix = sentence[:amount.start()]
+        if key in seen:
+            continue
+        seen.add(key)
+        value = Decimal(amount_in_pln(amount))
+        group = recipient_group(sentence)
+        count = count_people(group) if group else None
+        counts.append(count)
+        if group:
+            recipients.add(group)
+        if re.search(r"\bpo\s*$", prefix, re.I):
+            if count is None:
+                result["status"] = "per-person award has an unresolved beneficiary group"
+                return result
+            value *= count
+        total += value
+    count = count_people(next(iter(recipients))) if len(recipients) == 1 else len(recipients) if recipients and all(value == 1 for value in counts) else None
     result.update(
-        suma=str(total),
-        confirmed=True,
+        suma=str(total), confirmed=True,
+        injured_party_count=count if count is not None else "not_available",
+        beneficiaries=sorted(recipients),
         status="amount parsed from embedding-selected judgment sentence",
     )
     request = matches.get("request")

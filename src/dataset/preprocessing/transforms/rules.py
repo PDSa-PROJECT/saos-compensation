@@ -2,6 +2,7 @@
 
 TEXT_FIELDS = ("cause", "damage", "limitations")
 FIELD_RULES = {
+    "court_type": {"type": "categorical", "unknown": "ignore"},
     "judgment_year": {"type": "numeric", "transform": "year_digits", "scaling": "none", "missing": "error"},
     "injured_party_count": {"type": "numeric", "transform": "identity", "scaling": "none", "missing": "error"},
     "prior_payment": {"type": "numeric", "transform": "log1p", "scaling": "robust", "missing": "error"},
