@@ -86,7 +86,7 @@ def test_target_is_checked_before_any_feature_inference(
     monkeypatch.setattr(decisions, "ask", ask)
     config = config_module.load_config()
     config["fields"] = {}
-    config["api"]["debug"] = debug
+    config["processing"]["debug"] = debug
     result = asyncio.run(basal.extract(None, "Source judgment.", config, 42))
     assert result["award"] == award
     assert events == (["target", "instance"] if continues else ["target"])

@@ -19,18 +19,18 @@ def test_source_precedence(config_directory, monkeypatch):
     returns:
         None.
     """
-    path = config_directory / "api.yaml"
+    path = config_directory / "process.yaml"
     api = {**read_config(path), "timeout": 5}
     path.write_text(yaml.safe_dump(api))
-    assert load_config(config_directory)["api"]["timeout"] == 5
+    assert load_config(config_directory)["processing"]["timeout"] == 5
     Path(RuntimeSettings.model_config["env_file"]).write_text(
-        "ACQUISITION_TIMEOUT=40\nACQUISITION_DEBUG=false\n"
+        "PROCESSING_TIMEOUT=40\nPROCESSING_DEBUG=false\n"
     )
-    assert load_config(config_directory)["api"]["timeout"] == 40
-    assert load_config(config_directory)["api"]["debug"] is False
-    monkeypatch.setenv("ACQUISITION_TIMEOUT", "60")
-    assert load_config(config_directory)["api"]["timeout"] == 60
-    assert load_config(config_directory, {"timeout": 80})["api"]["timeout"] == 80
+    assert load_config(config_directory)["processing"]["timeout"] == 40
+    assert load_config(config_directory)["processing"]["debug"] is False
+    monkeypatch.setenv("PROCESSING_TIMEOUT", "60")
+    assert load_config(config_directory)["processing"]["timeout"] == 60
+    assert load_config(config_directory, {"timeout": 80})["processing"]["timeout"] == 80
 
 
 def test_model_overrides(config_directory, monkeypatch):
@@ -64,7 +64,7 @@ def test_invalid_runtime_value(config_directory, monkeypatch):
     returns:
         None.
     """
-    monkeypatch.setenv("ACQUISITION_TIMEOUT", "invalid")
+    monkeypatch.setenv("PROCESSING_TIMEOUT", "invalid")
     with pytest.raises(ValueError):
         load_config(config_directory)
 
@@ -83,26 +83,25 @@ def test_example_env_preserves_defaults(project_root):
     )
 
 
-def test_checkpoint_compatibility(config_directory, monkeypatch, tmp_path):
+def test_checkpoint_compatibility(config_directory, monkeypatch, output_root):
     """Allow operational changes but reject a different model/device signature.
 
     args:
         config_directory: Explicit YAML directory.
         monkeypatch: Scoped checkpoint root and environment overrides.
-        tmp_path: Isolated checkpoint output root.
+        output_root: Isolated raw snapshot and processing output root.
 
     returns:
         None.
     """
     from dataset.storage import checkpoints
 
-    monkeypatch.setattr(checkpoints, "ROOT", tmp_path)
-    overrides = {"download_path": "dataset"}
+    overrides = {"output_path": "dataset"}
     config = load_config(config_directory, overrides)
     checkpoint = checkpoints.load_checkpoint(config)
-    checkpoints.save_checkpoint(tmp_path / "dataset", checkpoint)
-    monkeypatch.setenv("ACQUISITION_TIMEOUT", "99")
-    monkeypatch.setenv("ACQUISITION_DEBUG", "false")
+    checkpoints.save_checkpoint(output_root / "dataset", checkpoint)
+    monkeypatch.setenv("PROCESSING_TIMEOUT", "99")
+    monkeypatch.setenv("PROCESSING_DEBUG", "false")
     assert checkpoints.load_checkpoint(load_config(config_directory, overrides)) == checkpoint
     device = "cpu" if config["system_one"]["device"] != "cpu" else "mps"
     monkeypatch.setenv("BASAL_DEVICE", device)

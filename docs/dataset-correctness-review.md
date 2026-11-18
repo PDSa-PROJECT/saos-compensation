@@ -22,6 +22,9 @@ Poniższe rozwiązania są propozycjami. Nie zostały w ramach tego dokumentu wd
 6. Odrzucać z cech same markery dowodowe i wymagać zgodności opisu z osobą, której dotyczy target. Doprecyzowanie pytania o nazwę lub inicjały właściwej osoby jest prostszym pierwszym krokiem niż budowa osobnego mechanizmu identyfikacji wszystkich uczestników.
 7. Zmiany progów sprawdzać pojedynczo. Nie obniżać globalnie progów Basala w celu odzyskania wcześniejszych wypłat: mogłoby to jednocześnie przepuścić więcej kosztów i nieistotnych opisów. Najpierw poprawić filtr i format odpowiedzi.
 
+**podstawowy fix**
+najpierw szukamy gru
+
 ## Niepoprawne lub niepełne przypadki
 
 ### 256976 — I C 1092/15
@@ -30,7 +33,7 @@ Poniższe rozwiązania są propozycjami. Nie zostały w ramach tego dokumentu wd
 
 **Przyczyna:** jako target wybrano rozważania o odpowiedniej łącznej wysokości zadośćuczynienia przed odjęciem wcześniejszej wypłaty. Prawidłową klauzulę z sentencji zakwalifikowano jako odsetki. Basal zwrócił dla wcześniejszej wypłaty zbyt szeroki fragment o niskiej pewności.
 
-**Proponowane rozwiązanie:** najpierw sprawdzić klauzulę „zasądza ... kwotę ...” z sentencji. Przy zwrocie „z odsetkami” zachować kwotę główną i oddzielić dalszy tekst. Dodać wzorzec świadczenia głównego z odsetkami. W kontekście wcześniejszej zapłaty wyodrębnić samo `5000 zł` filtrem tekst → liczba.
+**Proponowane rozwiązanie:** mamy juz w targets.yaml baze do rozpoznawania prior payment.
 
 ### 256991 — I C 1227/15
 

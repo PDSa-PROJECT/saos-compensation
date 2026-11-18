@@ -1,4 +1,4 @@
-"""Acquisition configuration boundaries and checkpoint compatibility."""
+"""Processing configuration boundaries and checkpoint compatibility."""
 
 import pytest
 import yaml
@@ -8,13 +8,15 @@ from dataset.extraction.model import configuration
 
 def test_changed_question_invalidates_checkpoint(
     config_directory,
+    output_root,
     monkeypatch,
     tmp_path,
 ):
     """Resume unchanged settings and reject a changed question on resume.
 
     args:
-        config_directory: Isolated acquisition YAML directory.
+        config_directory: Isolated processing YAML directory.
+        output_root: Prepared raw input and processing output root.
         monkeypatch: Scoped repository-root replacement.
         tmp_path: Temporary dataset root.
 
@@ -28,7 +30,7 @@ def test_changed_question_invalidates_checkpoint(
     monkeypatch.setattr(checkpoints, "ROOT", tmp_path)
     checkpoint = checkpoints.load_checkpoint(config)
     write_json(
-        tmp_path / config["api"]["download_path"] / "checkpoint.json", checkpoint
+        tmp_path / config["processing"]["output_path"] / "checkpoint.json", checkpoint
     )
     assert checkpoints.load_checkpoint(config) == checkpoint
     path = config_directory / "features.yaml"

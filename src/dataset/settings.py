@@ -114,8 +114,13 @@ class RuntimeSettings(BaseSettings):
 
     acquisition_max_gib: Annotated[int | float, AfterValidator(finite_number)] = Field(0.5, ge=0)
     acquisition_debug: bool = True
-    acquisition_download_path: NonblankString = "tmp/"
+    acquisition_download_path: NonblankString = "tmp/raw"
     acquisition_timeout: Annotated[int | float, AfterValidator(finite_number)] = Field(20, gt=0)
+    processing_input_path: NonblankString = "tmp/raw"
+    processing_output_path: NonblankString = "tmp/processed"
+    processing_max_gib: Annotated[int | float, AfterValidator(finite_number)] = Field(0.5, ge=0)
+    processing_debug: bool = True
+    processing_timeout: Annotated[int | float, AfterValidator(finite_number)] = Field(20, gt=0)
     embedding_device: Device = "mps"
     embedding_batch_size: int = Field(64, gt=0)
     embedding_model: NonblankString | None = None

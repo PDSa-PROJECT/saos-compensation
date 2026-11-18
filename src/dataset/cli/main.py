@@ -1,7 +1,6 @@
-"""Download and filter judgments."""
+"""Search broadly and download complete SAOS judgments without model processing."""
 
 import argparse
-import asyncio
 
 from ..acquisition.pipeline import run
 
@@ -18,11 +17,16 @@ def parse_arguments(arguments=None):
     """
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="Explicit CLI options override environment, .env and YAML; runtime keys are in .env.example.",
+        epilog="Explicit CLI options override environment, .env and YAML; use process-data for extraction.",
     )
     parser.add_argument(
         "--config-dir",
         help="Acquisition configuration directory (default: configs/dataset/acquisition)",
+    )
+    parser.add_argument(
+        "--search-query",
+        default=argparse.SUPPRESS,
+        help="Broad SAOS full-text query (default: zadośćuczynienie)",
     )
     parser.add_argument(
         "--max-age-years",
@@ -34,7 +38,7 @@ def parse_arguments(arguments=None):
         "--max-pages",
         type=int,
         default=argparse.SUPPRESS,
-        help="Maximum dump pages (100 judgments each); 0 reads all pages",
+        help="Maximum search pages (100 judgments each); 0 reads all pages",
     )
     parser.add_argument(
         "--max-gib",
@@ -45,7 +49,7 @@ def parse_arguments(arguments=None):
     parser.add_argument(
         "--download-path",
         default=argparse.SUPPRESS,
-        help="Output directory relative to the project root",
+        help="Raw output directory; absolute or relative to the project root",
     )
     parser.add_argument(
         "--timeout",
@@ -57,14 +61,14 @@ def parse_arguments(arguments=None):
         "--debug",
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
-        help="Save source/model calls and retain failed extraction attempts with valid=false",
+        help="Print per-page download progress; raw JSON is always saved",
     )
     return parser.parse_args(arguments)
 
 
 def main():
     """
-    Load effective settings and run the dataset pipeline.
+    Load download settings and run raw acquisition.
 
     args:
         None
@@ -72,15 +76,15 @@ def main():
     returns:
         None.
     """
-    from ..extraction.model.configuration import load_config
+    from ..acquisition.settings import load_config
 
     options = vars(parse_arguments())
     directory = options.pop("config_dir")
     try:
-        asyncio.run(run(load_config(directory, options)))
+        run(load_config(directory, options))
     except KeyboardInterrupt:
         print(
-            "Interrupted. Completed model decisions are saved; rerun the same command to resume.",
+            "Interrupted. Saved raw pages are preserved; rerun get-raw-data to resume.",
             flush=True,
         )
         raise SystemExit(130)

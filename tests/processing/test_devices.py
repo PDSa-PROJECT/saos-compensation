@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from dataset.acquisition import pipeline
+from dataset.processing import pipeline
 from dataset.extraction.model import configuration as config_module
 
 

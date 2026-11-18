@@ -101,7 +101,7 @@ def test_config_requires_text_fields_with_metadata_selection(project_root, tmp_p
     """
     import yaml
 
-    shutil.copytree(project_root / "configs/dataset/acquisition", tmp_path, dirs_exist_ok=True)
+    shutil.copytree(project_root / "configs/dataset/processing", tmp_path, dirs_exist_ok=True)
     config = config_module.read_config(tmp_path / "features.yaml")
     config["metadata_fields"] = list(prompts.METADATA_FIELDS)
     config["text_fields"] = {}

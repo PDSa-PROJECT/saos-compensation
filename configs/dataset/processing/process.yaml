@@ -1,0 +1,9 @@
+# Raw SAOS input and separate processed output: absolute or relative to the project root.
+input_path: "tmp/raw"
+output_path: "tmp/processed"
+# Total processing-output limit in GiB across resumes; 0 disables it.
+max_gib: 0.5
+# Save source/model calls and retain eligible failed attempts with valid=false.
+debug: true
+# HTTP timeout for the locality snapshot; processing never requests SAOS.
+timeout: 20

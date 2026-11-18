@@ -130,11 +130,11 @@ async def ask(server, state, questions, config):
     key = hashlib.sha256(
         json.dumps([identity, request], ensure_ascii=False, sort_keys=True).encode()
     ).hexdigest()
-    path = ROOT / config["api"]["download_path"] / "debug" / "decisions" / f"{key}.json"
+    path = ROOT / config["processing"]["output_path"] / "debug" / "decisions" / f"{key}.json"
     progress = DECISION_CACHE.get()
     if progress is not None:
         path = progress / f"{key}.json"
-    cache_enabled = config["api"]["debug"] or progress is not None
+    cache_enabled = config["processing"]["debug"] or progress is not None
     if cache_enabled:
         path.parent.mkdir(parents=True, exist_ok=True)
     if cache_enabled and path.exists():

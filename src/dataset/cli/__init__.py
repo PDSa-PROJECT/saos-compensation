@@ -1,1 +1,1 @@
-"""Command-line entry points for dataset acquisition."""
+"""Command-line entry points for raw acquisition and local processing."""

@@ -81,9 +81,43 @@ def fetch_json(url, directory=None, session=None, timeout=30):
     return payload
 
 
+def search_parameters(params):
+    """Translate saved inclusive date bounds to SAOS search parameters.
+
+    args:
+        params: Checkpoint query using stable internal date keys.
+
+    returns:
+        Query accepted by the search endpoint.
+    """
+    names = {"judgmentStartDate": "judgmentDateFrom", "judgmentEndDate": "judgmentDateTo"}
+    return {names.get(key, key): value for key, value in params.items()}
+
+
+def validate_search_query(payload, params):
+    """Require the search response to acknowledge every requested filter.
+
+    args:
+        payload: Live or persisted search response.
+        params: Internal or API query parameters.
+
+    returns:
+        None.
+    """
+    template = payload.get("queryTemplate")
+    if not isinstance(template, dict):
+        raise ValueError("Search response is missing queryTemplate")
+    for key, value in search_parameters(params).items():
+        applied = template.get(key)
+        applied = applied.get("value") if isinstance(applied, dict) else applied
+        expected = [value] if key == "judgmentTypes" else value
+        if applied != expected:
+            raise ValueError(f"API did not apply {key}")
+
+
 def search_judgments(params, directory=None, session=None, timeout=30):
     """
-    Fetch a dump page and validate its query, identifiers and pagination.
+    Search broadly, validate pagination and fetch every complete judgment.
 
     args:
         params: Effective SAOS query parameters.
@@ -92,10 +126,11 @@ def search_judgments(params, directory=None, session=None, timeout=30):
         timeout: Connection/read timeout in seconds.
 
     returns:
-        Result of this operation.
+        Search envelope with complete items and original searchItems snippets.
     """
+    params = search_parameters(params)
     url = (
-        requests.Request("GET", BASE_URL + "/dump/judgments", params=params)
+        requests.Request("GET", BASE_URL + "/search/judgments", params=params)
         .prepare()
         .url
     )
@@ -103,21 +138,15 @@ def search_judgments(params, directory=None, session=None, timeout=30):
     if not isinstance(result.get("items"), list) or not isinstance(
         result.get("links"), list
     ):
-        raise ValueError("Dump response is missing items or pagination links")
-    template = result.get("queryTemplate")
-    if not isinstance(template, dict):
-        raise ValueError("Dump response is missing queryTemplate")
-    for key, value in params.items():
-        applied = template.get(key)
-        if not isinstance(applied, dict) or applied.get("value") != value:
-            raise ValueError(f"API did not apply {key}")
+        raise ValueError("Search response is missing items or pagination links")
+    validate_search_query(result, params)
     ids = [
         item.get("id") if isinstance(item, dict) else None for item in result["items"]
     ]
     if any(type(value) is not int or value <= 0 for value in ids):
-        raise ValueError("Dump returned an invalid judgment ID")
+        raise ValueError("Search returned an invalid judgment ID")
     if len(ids) != len(set(ids)) or len(ids) > params["pageSize"]:
-        raise ValueError("Dump returned duplicate IDs or an oversized page")
+        raise ValueError("Search returned duplicate IDs or an oversized page")
     relations = set()
     for link in result["links"]:
         if (
@@ -131,61 +160,49 @@ def search_judgments(params, directory=None, session=None, timeout=30):
             raise ValueError("Duplicate pagination relation")
         relations.add(link["rel"])
     if "self" not in relations or ("next" in relations and not ids):
-        raise ValueError("Invalid dump pagination")
-    return result
+        raise ValueError("Invalid search pagination")
+    items = []
+    for item in result["items"]:
+        identifier = item["id"]
+        detail = fetch_json(f"{BASE_URL}/judgments/{identifier}", directory, session, timeout)
+        data = detail.get("data")
+        if (
+            not isinstance(data, dict)
+            or type(data.get("id")) is not int
+            or data["id"] != identifier
+            or not isinstance(data.get("textContent"), str)
+            or not data["textContent"].strip()
+        ):
+            raise ValueError(f"Invalid full judgment response: {identifier}")
+        items.append(data)
+    return {**result, "searchItems": result["items"], "items": items}
 
 
-def load_divisions(session, directory=None, timeout=30):
-    """
-    Build a division-to-court lookup from the official court dump.
+
+def search_courts(page, session=None, timeout=30):
+    """Fetch one raw court dump page and validate its transport envelope.
 
     args:
-        session: Reusable HTTP session, when supplied.
-        directory: Input or output directory for this operation.
-        timeout: Connection/read timeout in seconds.
+        page: Zero-based court dump page.
+        session: Shared HTTP session.
+        timeout: Explicit HTTP timeout in seconds.
 
     returns:
-        Division records indexed by identifier.
+        Original court response, retaining every API field.
     """
-    divisions = {}
-    page = 0
-    while True:
-        url = f"{BASE_URL}/dump/commonCourts?pageSize=100&pageNumber={page}"
-        payload = fetch_json(url, directory, session, timeout)
-        if not isinstance(payload.get("items"), list) or not isinstance(
-            payload.get("links"), list
-        ):
-            raise ValueError("Invalid common-court dump")
-        for court in payload["items"]:
-            if (
-                not isinstance(court, dict)
-                or type(court.get("id")) is not int
-                or court["id"] <= 0
-                or not isinstance(court.get("name"), str)
-                or not court["name"].strip()
-                or not isinstance(court.get("divisions"), list)
-                or court.get("type") not in {"DISTRICT", "REGIONAL", "APPEAL"}
-            ):
-                raise ValueError("Invalid court in dump")
-            for division in court["divisions"]:
-                if not isinstance(division, dict):
-                    raise ValueError("Invalid division in court dump")
-                identifier = division.get("id")
-                if (
-                    type(identifier) is not int
-                    or identifier <= 0
-                    or not isinstance(division.get("name"), str)
-                    or identifier in divisions
-                ):
-                    raise ValueError("Invalid or duplicate division in dump")
-                divisions[identifier] = {
-                    **division,
-                    "court": {key: court[key] for key in ("id", "name", "type")},
-                }
-        if any(not isinstance(link, dict) for link in payload["links"]):
+    payload = fetch_json(f"{BASE_URL}/dump/commonCourts?pageSize=100&pageNumber={page}", session=session, timeout=timeout)
+    if not isinstance(payload.get("items"), list) or not isinstance(payload.get("links"), list):
+        raise ValueError("Invalid common-court dump")
+    ids = [row.get("id") if isinstance(row, dict) else None for row in payload["items"]]
+    if any(type(value) is not int or value <= 0 for value in ids) or len(ids) != len(set(ids)):
+        raise ValueError("Invalid or duplicate court IDs")
+    relations = set()
+    for link in payload["links"]:
+        if not isinstance(link, dict) or link.get("rel") not in {"self", "next", "prev", "previous", "first", "last"} or not isinstance(link.get("href"), str):
             raise ValueError("Invalid court pagination link")
-        if not any(link.get("rel") == "next" for link in payload["links"]):
-            return divisions
-        if not payload["items"]:
-            raise ValueError("Empty common-court page before next link")
-        page += 1
+        if link["rel"] in relations:
+            raise ValueError("Duplicate court pagination relation")
+        relations.add(link["rel"])
+    if len(ids) > 100 or "self" not in relations or (not ids and "next" in relations):
+        raise ValueError("Invalid common-court pagination")
+    return payload
