@@ -24,12 +24,14 @@ def validate_settings(settings, patterns):
     TargetSettings.from_mapping({"embedding": settings, "patterns": patterns})
 
 
-def candidate_sentences(text, keywords):
-    """Locate each PLN amount with five words of context and preserved source evidence.
+def candidate_sentences(text, keywords, *, context_words_before=5, context_words_after=5):
+    """Locate each PLN amount with configured word context and preserved source evidence.
 
     args:
         text: Full normalized judgment text.
         keywords: Configured stems admitting monetary source clauses.
+        context_words_before: Maximum words preceding each amount; zero excludes them.
+        context_words_after: Maximum words following each amount; zero excludes them.
 
     returns:
         Independently classified amount windows, exact offsets and operative context.
@@ -58,8 +60,8 @@ def candidate_sentences(text, keywords):
                 for index, amount in enumerate(amounts):
                     before = list(re.finditer(r"\S+", source[:amount.start()]))
                     after = list(re.finditer(r"\S+", source[amount.end():]))
-                    start = before[-5].start() if len(before) >= 5 else 0
-                    end = amount.end() + after[4].end() if len(after) >= 5 else len(source)
+                    start = amount.start() if context_words_before == 0 else before[-context_words_before].start() if len(before) >= context_words_before else 0
+                    end = amount.end() if context_words_after == 0 else amount.end() + after[context_words_after-1].end() if len(after) >= context_words_after else len(source)
                     window = source[start:end]
                     local_classes = classes
                     costs = bool(re.search(r"koszt\w*\s+(?:proces|postępow|zastępstw|sądow)|zastępstw\w*\s+proces|opłat\w*\s+sądow|wynagrodzeni\w*\s+pełnomocn|Skarbu Państwa|wynagrodzenie.*biegł", source[amount.start():amounts[index+1].start()] if amount is not amounts[-1] else source[amount.start():], re.I))
@@ -210,7 +212,7 @@ class TargetMatcher:
         """
         from .cosine_similarity import cosine_similarity
 
-        sentences = candidate_sentences(text, self.settings["candidate_keywords"])
+        sentences = candidate_sentences(text, self.settings["candidate_keywords"], context_words_before=self.settings["context_words_before"], context_words_after=self.settings["context_words_after"])
         result = dict.fromkeys(PATTERN_CLASSES)
         if not sentences:
             return result
@@ -287,7 +289,7 @@ def match_targets(text, config):
         return dict.fromkeys(PATTERN_CLASSES)
     reasons = REASONS.search(text)
     ruling = text[:reasons.start()] if reasons else text
-    principal = [row for row in candidate_sentences(ruling, config["embedding"]["candidate_keywords"]) if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"]]
+    principal = [row for row in candidate_sentences(ruling, config["embedding"]["candidate_keywords"], context_words_before=config["embedding"]["context_words_before"], context_words_after=config["embedding"]["context_words_after"]) if row["operative"] and row["first_amount"] and not row["procedural"] and "judgment" in row["classes"]]
     if re.search(r"oddal\w*\s+apelac|apelac\w*.*oddal|utrzym\w*.*w mocy", ruling, re.I):
         if not principal:
             return {**dict.fromkeys(PATTERN_CLASSES), "excluded_reason": "appeal contains no new principal award"}

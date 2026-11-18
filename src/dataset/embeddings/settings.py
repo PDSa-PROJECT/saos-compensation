@@ -26,6 +26,8 @@ class TargetMatchingSettings(EncoderSettings):
     """Encoder settings plus strict role eligibility and cosine admission settings."""
 
     minimum_cosine_similarity: Probability
+    context_words_before: int = Field(ge=0)
+    context_words_after: int = Field(ge=0)
     candidate_keywords: dict[str, list[NonblankString]]
 
     @field_validator("candidate_keywords")
