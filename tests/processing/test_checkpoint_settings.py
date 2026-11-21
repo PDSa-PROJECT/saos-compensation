@@ -40,3 +40,26 @@ def test_changed_question_invalidates_checkpoint(
     changed = configuration.load_config(config_directory)
     with pytest.raises(ValueError, match="Extraction settings changed"):
         checkpoints.load_checkpoint(changed)
+
+
+def test_changed_amount_context_invalidates_processing_checkpoint(config_directory, output_root):
+    """Prevent mixing records extracted with different monetary context sizes.
+
+    args:
+        config_directory: Isolated processing YAML directory.
+        output_root: Prepared raw input and isolated output root.
+
+    returns:
+        None.
+    """
+    from dataset.storage import checkpoints
+
+    config = configuration.load_config(config_directory)
+    state = checkpoints.load_checkpoint(config)
+    checkpoints.save_checkpoint(output_root / config["processing"]["output_path"], state)
+    path = config_directory / "targets.yaml"
+    settings = yaml.safe_load(path.read_text())
+    settings["embedding"]["context_words_after"] += 1
+    path.write_text(yaml.safe_dump(settings, allow_unicode=True))
+    with pytest.raises(ValueError, match="Extraction settings changed"):
+        checkpoints.load_checkpoint(configuration.load_config(config_directory))

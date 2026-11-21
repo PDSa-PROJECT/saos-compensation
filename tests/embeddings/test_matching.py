@@ -22,6 +22,8 @@ SETTINGS = {
     "batch_size": 8,
     "max_length": 128,
     "minimum_cosine_similarity": 0.7,
+    "context_words_before": 5,
+    "context_words_after": 5,
     "candidate_keywords": {
         "judgment": ["zasądz"],
         "request": ["żąda"],
