@@ -46,6 +46,10 @@ pytorch-cuda-linux = [
 dev = [
     "ruff>=0.17.5",
 ]
+exploration = [
+    "marimo>=0.20,<1",
+    "polars>=1.30,<2",
+]
 test = [
     { include-group = "dev" },
     "pytest>=9.1.1",
