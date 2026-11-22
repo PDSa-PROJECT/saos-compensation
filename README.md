@@ -60,7 +60,7 @@ The installed package is `saos_dataset`, discovered under `src/`. Acquisition, e
 
 See the [development guide](docs/development.md#package-boundaries) for module responsibilities and runtime dependencies.
 
-The separate workflow interfaces and local ZenML setup are described in the [workflow guide](docs/workflows.md). The three new data pipelines are not implemented yet.
+The three local ZenML judgment pipelines and their limitations are described in the [workflow guide](docs/workflows.md).
 
 ## Setup
 
