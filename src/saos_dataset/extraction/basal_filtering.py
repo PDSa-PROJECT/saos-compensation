@@ -30,6 +30,22 @@ async def extract(server, text, config, identifier):
         and target_rejection_reason(award, config) is not None
     ):
         return {"id": identifier, "award": award}
+    return await extract_predictors(server, text, config, identifier, award)
+
+
+async def extract_predictors(server, text, config, identifier, award):
+    """Extract predictor work after a target award has already been prepared.
+
+    args:
+        server: Local inference server.
+        text: Normalized Polish source text.
+        config: Effective pipeline or acquisition settings.
+        identifier: Stable judgment identifier.
+        award: Existing extracted award and target context.
+
+    returns:
+        Predictor features combined with the supplied award and stable source hash.
+    """
     prior_features = {}
     if "prior_payment" in config["metadata_fields"]:
         prior_features["prior_payment"] = await amounts.extract_prior_payment(
