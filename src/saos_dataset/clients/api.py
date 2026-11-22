@@ -115,9 +115,8 @@ def validate_search_query(payload, params):
             raise ValueError(f"API did not apply {key}")
 
 
-def search_judgments(params, directory=None, session=None, timeout=30):
-    """
-    Search broadly, validate pagination and fetch every complete judgment.
+def search_judgments_page(params, directory=None, session=None, timeout=30):
+    """Fetch and validate one search page without requesting judgment details.
 
     args:
         params: Effective SAOS query parameters.
@@ -126,7 +125,7 @@ def search_judgments(params, directory=None, session=None, timeout=30):
         timeout: Connection/read timeout in seconds.
 
     returns:
-        Search envelope with complete items and original searchItems snippets.
+        Original validated search envelope with its search snippets unchanged.
     """
     params = search_parameters(params)
     url = (
@@ -161,20 +160,52 @@ def search_judgments(params, directory=None, session=None, timeout=30):
         relations.add(link["rel"])
     if "self" not in relations or ("next" in relations and not ids):
         raise ValueError("Invalid search pagination")
+    return result
+
+
+def fetch_judgment(identifier, directory=None, session=None, timeout=30):
+    """Fetch a complete judgment and validate its identity and source text.
+
+    args:
+        identifier: Stable SAOS judgment ID from a validated search page.
+        directory: Optional destination for original response bytes.
+        session: Reusable HTTP session, when supplied.
+        timeout: Connection/read timeout in seconds.
+
+    returns:
+        Complete detail response, retaining its envelope and unknown fields.
+    """
+    detail = fetch_json(f"{BASE_URL}/judgments/{identifier}", directory, session, timeout)
+    data = detail.get("data")
+    if (
+        not isinstance(data, dict)
+        or type(data.get("id")) is not int
+        or data["id"] != identifier
+        or not isinstance(data.get("textContent"), str)
+        or not data["textContent"].strip()
+    ):
+        raise ValueError(f"Invalid full judgment response: {identifier}")
+    return detail
+
+
+def search_judgments(params, directory=None, session=None, timeout=30):
+    """Search broadly, validate pagination and fetch every complete judgment.
+
+    args:
+        params: Effective SAOS query parameters.
+        directory: Input or output directory for this operation.
+        session: Reusable HTTP session, when supplied.
+        timeout: Connection/read timeout in seconds.
+
+    returns:
+        Search envelope with complete items and original searchItems snippets.
+    """
+    result = search_judgments_page(params, directory, session, timeout)
     items = []
     for item in result["items"]:
         identifier = item["id"]
-        detail = fetch_json(f"{BASE_URL}/judgments/{identifier}", directory, session, timeout)
-        data = detail.get("data")
-        if (
-            not isinstance(data, dict)
-            or type(data.get("id")) is not int
-            or data["id"] != identifier
-            or not isinstance(data.get("textContent"), str)
-            or not data["textContent"].strip()
-        ):
-            raise ValueError(f"Invalid full judgment response: {identifier}")
-        items.append(data)
+        detail = fetch_judgment(identifier, directory, session, timeout)
+        items.append(detail["data"])
     return {**result, "searchItems": result["items"], "items": items}
 
 
