@@ -2,28 +2,28 @@
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
+import shutil
 
 import pytest
 
-from saos_dataset.processing import pipeline, source
-from saos_dataset.storage import checkpoints
 from saos_dataset.storage.files import write_json
 from saos_dataset.acquisition.settings import load_config, search_settings
 
 
 @pytest.fixture
-def output_root(monkeypatch, tmp_path):
+def output_root(monkeypatch, tmp_path, project_root):
     """Keep pipeline, local source and checkpoint output in one isolated root.
 
     args:
-        monkeypatch: Scoped module configuration overrides.
+        monkeypatch: Scoped launch-directory override.
         tmp_path: Isolated test directory.
+        project_root: Pytest checkout containing configuration fixtures.
 
     returns:
         Root containing the test dataset and temporary state.
     """
-    for module in (pipeline, source, checkpoints):
-        monkeypatch.setattr(module, "ROOT", tmp_path)
+    shutil.copytree(project_root / "configs", tmp_path / "configs")
+    monkeypatch.chdir(tmp_path)
     raw = tmp_path / "tmp/raw"
     request = search_settings(load_config())[2]
     write_json(raw / "checkpoint.json", {

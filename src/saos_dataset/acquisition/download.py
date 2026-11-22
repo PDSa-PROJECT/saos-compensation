@@ -10,9 +10,6 @@ from saos_dataset.storage.files import StorageLimitError, output_limit
 from saos_dataset.storage.raw import page_path, read_page, write_page
 from .settings import search_settings
 
-ROOT = Path(__file__).resolve().parents[3]
-
-
 def download(config):
     """Save raw court and judgment pages before advancing their independent cursors.
 
@@ -23,7 +20,7 @@ def download(config):
         None.
     """
     search_settings(config)
-    directory = ROOT / config["download_path"]
+    directory = Path(config["download_path"])
     checkpoint = load_raw_checkpoint(config)
     summary = {"started_at": datetime.now(timezone.utc).isoformat(), "pages": 0, "judgments": 0, "complete": False}
     try:

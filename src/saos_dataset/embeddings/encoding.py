@@ -4,9 +4,8 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from saos_dataset.configuration import validate_path
 from .settings import ENCODER_SETTINGS, EncoderSettings
-
-ROOT = Path(__file__).resolve().parents[3]
 
 
 def validate_settings(settings):
@@ -27,12 +26,13 @@ def validate_settings(settings):
 class SentenceEncoder:
     """Mean-pooled multilingual embeddings with complete long-sentence coverage."""
 
-    def __init__(self, settings):
+    def __init__(self, settings, cache_dir="embedding_weights"):
         """
         Load the pinned tokenizer and model into the selected PyTorch device.
 
         args:
             settings: Validated embedding configuration.
+            cache_dir: Explicit tokenizer and model cache directory.
 
         returns:
             None.
@@ -48,7 +48,7 @@ class SentenceEncoder:
             raise RuntimeError("Embedding MPS was requested but is unavailable")
         options = {
             "revision": settings["revision"],
-            "cache_dir": ROOT / "embedding_weights",
+            "cache_dir": Path(cache_dir),
         }
         self.tokenizer = AutoTokenizer.from_pretrained(settings["model"], **options)
         self.model = (
@@ -100,25 +100,27 @@ class SentenceEncoder:
 
 
 @lru_cache(maxsize=1)
-def cached_encoder(settings_json):
+def cached_encoder(settings_json, cache_dir="embedding_weights"):
     """Reuse one encoder for unchanged model and runtime settings.
 
     args:
         settings_json: Serialized encoder-only configuration.
+        cache_dir: Cache location included in the loaded-encoder identity.
 
     returns:
         Loaded sentence encoder.
     """
-    return SentenceEncoder(json.loads(settings_json))
+    return SentenceEncoder(json.loads(settings_json), cache_dir)
 
 
-def create_embeddings(texts, settings):
+def create_embeddings(texts, settings, *, cache_dir="embedding_weights"):
     """Embed original texts without target-specific filtering or normalization.
 
     args:
         texts: Nonempty list of nonblank strings, retained in input order.
         settings: Model, revision, device, batch_size and max_length mapping;
             additional target-matching settings are ignored.
+        cache_dir: Model cache path, relative to the working directory or absolute.
 
     returns:
         Float32 PyTorch tensor of shape (len(texts), model dimension) on the
@@ -129,7 +131,9 @@ def create_embeddings(texts, settings):
         not isinstance(text, str) or not text.strip() for text in texts
     ):
         raise ValueError("texts must be a nonempty list of nonblank strings")
+    validate_path(str(cache_dir) if isinstance(cache_dir, Path) else cache_dir, "cache_dir")
     encoder = cached_encoder(
-        json.dumps({key: settings[key] for key in ENCODER_SETTINGS}, sort_keys=True)
+        json.dumps({key: settings[key] for key in ENCODER_SETTINGS}, sort_keys=True),
+        str(Path(cache_dir).resolve()),
     )
     return encoder.encode(texts)

@@ -10,9 +10,6 @@ from saos_dataset.acquisition.settings import search_settings
 from .files import write_json
 from .raw import read_dataset
 
-ROOT = Path(__file__).resolve().parents[3]
-
-
 def save_checkpoint(directory, checkpoint):
     """Atomically persist progress after its corresponding output is durable.
 
@@ -62,7 +59,7 @@ def load_raw_checkpoint(config):
         Saved raw state or a new raw dataset identity and date-bounded query.
     """
     _, _, request = search_settings(config)
-    state = read_checkpoint(ROOT / config["download_path"], "raw")
+    state = read_checkpoint(config["download_path"], "raw")
     if state is None:
         return {"kind": "raw", "dataset_id": uuid4().hex, "request": request,
                 "page": 0, "court_page": 0, "courts_complete": False, "complete": False}
@@ -89,12 +86,12 @@ def load_checkpoint(config):
         Compatible processing state or a new independent processing checkpoint.
     """
     settings = config["processing"]
-    raw, source_signature = read_dataset(ROOT / settings["input_path"])
+    raw, source_signature = read_dataset(settings["input_path"])
     signature = hashlib.sha256(json.dumps(
-        {key: value for key, value in config.items() if key != "processing"},
+        {key: value for key, value in config.items() if key not in {"processing", "paths"}},
         ensure_ascii=False, sort_keys=True,
     ).encode()).hexdigest()
-    state = read_checkpoint(ROOT / settings["output_path"], "processing")
+    state = read_checkpoint(settings["output_path"], "processing")
     if state is None:
         return {"kind": "processing", "dataset_id": uuid4().hex, "signature": signature,
                 "source_signature": source_signature, "request": raw["request"],

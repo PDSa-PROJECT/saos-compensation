@@ -2,6 +2,7 @@
 
 import json
 import re
+from pathlib import Path
 from functools import lru_cache, partial
 from itertools import batched
 
@@ -138,7 +139,7 @@ def prepare_text(text):
 class TargetMatcher:
     """Cache pattern embeddings and rank source sentences by cosine similarity."""
 
-    def __init__(self, settings, patterns, encoder=None):
+    def __init__(self, settings, patterns, encoder=None, *, cache_dir="embedding_weights"):
         """
         Encode pattern templates once for reuse across judgments.
 
@@ -146,6 +147,7 @@ class TargetMatcher:
             settings: Embedding configuration and minimum similarity.
             patterns: Target and exclusion templates.
             encoder: Optional existing sentence encoder.
+            cache_dir: Explicit embedding-model cache directory.
 
         returns:
             None.
@@ -156,7 +158,7 @@ class TargetMatcher:
             (label, phrase) for label, phrases in patterns.items() for phrase in phrases
         ]
         self.encode = encoder.encode if encoder is not None else partial(
-            create_embeddings, settings=settings
+            create_embeddings, settings=settings, cache_dir=cache_dir
         )
         self.pattern_vectors = self.encode(
             [prepare_text(phrase) for _, phrase in self.patterns]
@@ -260,18 +262,19 @@ class TargetMatcher:
 
 
 @lru_cache(maxsize=1)
-def cached_matcher(settings_json, patterns_json):
+def cached_matcher(settings_json, patterns_json, cache_dir="embedding_weights"):
     """
     Reuse one model and pattern matrix for an unchanged configuration.
 
     args:
         settings_json: Serialized embedding configuration.
         patterns_json: Serialized pattern lists.
+        cache_dir: Model cache location included in the matcher identity.
 
     returns:
         Initialized target matcher.
     """
-    return TargetMatcher(json.loads(settings_json), json.loads(patterns_json))
+    return TargetMatcher(json.loads(settings_json), json.loads(patterns_json), cache_dir=cache_dir)
 
 
 def match_targets(text, config):
@@ -296,6 +299,7 @@ def match_targets(text, config):
     matcher = cached_matcher(
         json.dumps(config["embedding"], sort_keys=True),
         json.dumps(config["target_patterns"], sort_keys=True),
+        str(Path(config["paths"]["encoder_cache_path"]).resolve()),
     )
     result = matcher.match(text)
     selected = result["judgment"]

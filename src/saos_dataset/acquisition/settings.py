@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import Field, field_validator
 
 from saos_dataset.settings import FiniteNumber, NonblankString, Settings, RuntimeSettings
-from saos_dataset.configuration import ROOT, read_config, validate_path
+from saos_dataset.configuration import read_config, validate_path
 
 
 class AcquisitionSettings(Settings):
@@ -89,13 +89,13 @@ def load_config(directory=None, overrides=None):
     """Load only acquisition YAML and apply explicit download overrides.
 
     args:
-        directory: Directory containing api.yaml or None for the repository default.
+        directory: Directory containing api.yaml; defaults to configs/dataset/acquisition.
         overrides: Explicit CLI acquisition values.
 
     returns:
         Validated download settings without model configuration.
     """
-    directory = Path(directory) if directory is not None else ROOT / "configs/dataset/acquisition"
+    directory = Path(directory if directory is not None else "configs/dataset/acquisition")
     overrides = overrides or {}
     runtime = RuntimeSettings(**{
         "acquisition_" + key: value for key, value in overrides.items()

@@ -10,15 +10,12 @@ from saos_dataset.settings import RuntimeSettings
 from .prompts import DEFAULTS
 from .settings import BasalSettings, FeatureSettings, MODEL_REVISIONS
 
-ROOT = Path(__file__).resolve().parents[4]
-
-
 def load_config(directory=None, overrides=None):
     """
     Validate configuration and assemble effective extraction settings.
 
     args:
-        directory: Input or output directory for this operation.
+        directory: Processing YAML directory; defaults to configs/dataset/processing.
         overrides: Explicit local processing overrides, above environment and dotenv.
 
     returns:
@@ -29,7 +26,7 @@ def load_config(directory=None, overrides=None):
     directory = (
         Path(directory)
         if directory is not None
-        else ROOT / "configs" / "dataset" / "processing"
+        else Path("configs/dataset/processing")
     )
     basal = read_config(directory / "basal.yaml")
     processing = read_config(directory / "process.yaml")
@@ -59,6 +56,9 @@ def load_config(directory=None, overrides=None):
     config = {
         **copy.deepcopy(DEFAULTS),
         "processing": processing,
+        "paths": {name: getattr(runtime, name) for name in (
+            "model_cache_path", "encoder_cache_path", "localities_path"
+        )},
         "embedding": targets.embedding.model_dump(),
         "target_patterns": targets.patterns,
         "fields": features.text_fields,

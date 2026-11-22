@@ -9,7 +9,6 @@ from pathlib import Path
 
 from saos_dataset.storage.files import write_json
 
-ROOT = Path(__file__).resolve().parents[4]
 REQUEST_COUNTS = {"cached": 0, "computed": 0}
 MODEL_CALLS = ContextVar("model_calls", default=None)
 DECISION_CACHE = ContextVar("decision_cache", default=None)
@@ -130,7 +129,7 @@ async def ask(server, state, questions, config):
     key = hashlib.sha256(
         json.dumps([identity, request], ensure_ascii=False, sort_keys=True).encode()
     ).hexdigest()
-    path = ROOT / config["processing"]["output_path"] / "debug" / "decisions" / f"{key}.json"
+    path = Path(config["processing"]["output_path"]) / "debug" / "decisions" / f"{key}.json"
     progress = DECISION_CACHE.get()
     if progress is not None:
         path = progress / f"{key}.json"

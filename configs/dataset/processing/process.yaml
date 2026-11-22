@@ -1,4 +1,4 @@
-# Raw SAOS input and separate processed output: absolute or relative to the project root.
+# Raw SAOS input and separate processed output: absolute or relative to the working directory.
 input_path: "tmp/raw"
 output_path: "tmp/processed"
 # Total processing-output limit in GiB across resumes; 0 disables it.

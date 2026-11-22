@@ -4,9 +4,6 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-
-
 def read_config(path):
     """Read a YAML mapping without applying application-specific defaults.
 
