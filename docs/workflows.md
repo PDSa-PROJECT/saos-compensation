@@ -23,3 +23,46 @@ Relative `config_dir`, cache paths and `.env` use the process working directory;
 Both workflows use `saos_dataset` for query construction (`acquisition.settings.search_query`), pagination continuation (`clients.api.has_next_page`), admission/reason composition (`extraction.quality.admission_decision`), locality initialization (`processing.localities.load_locality_context`) and model/worker lifetime (`clients.basal.open_server`). Admission distinguishes retention from validity: debug attempts can receive metadata while remaining ineligible, and missing damage still prevents legacy retention. Combined rejection reasons use the legacy “text feature extraction skipped” wording when predictors were not evaluated. Existing source, target, predictor, metadata and device checks remain shared. Legacy processing keeps page/output durability, pending state, checkpoints and locality-hash verification; the individual pipeline modules keep phrase union, record caps, stage skipping and Parquet mapping. The target-only stage continues to call the existing amount extractor, and the feature stage calls only the target-prepared predictor helper.
 
 The local artifact store and exact-version handoffs were verified across all three decorated pipelines with fake API/model responses. Live S3 authentication/publication, live SAOS collection and real model inference remain unverified. Successful-output caching, automatic per-ID recovery and remote inference remain unimplemented. Failed publication must not be treated as a completed artifact; no custom S3 atomic-rename guarantee is introduced. Local tracking setup is documented [here](../infrastructure/zenml/local/README.md); shared hosting remains [deferred](../infrastructure/zenml/shared/README.md).
+
+## Explore local Parquet in the browser
+
+From the repository root, sync the optional dependencies separately. Use `edit` to change cells and save the notebook's Python source, or `run` to use the app without a code editor:
+
+```bash
+uv sync --locked --group exploration
+uv run --no-sync marimo edit notebooks/explore_dataset.py
+# Or, for the interactive app only:
+uv run --no-sync marimo run notebooks/explore_dataset.py
+```
+
+Enter the path to one existing local judgment Parquet file (absolute or relative to the working directory). For a local ZenML output, copy the **artifact version UUID**, not the artifact name or run ID. In the same ZenML environment that produced the output, resolve that exact version without running a pipeline or loading any rows:
+
+```python
+from uuid import UUID
+
+from zenml.client import Client
+
+version = Client().get_artifact_version(UUID("<artifact-version-uuid>"))
+print(version.load().uri)  # For these workflow outputs, the local data.parquet path.
+```
+
+Paste the path into the notebook; it does not look up versions or select the latest one. S3 paths are out of scope for this notebook.
+
+- Click **Apply** to read the selected file and run its overview with the current filters. Selection, eligibility, amount category, and selection reason are filterable. Unset eligibility means not evaluated; a missing amount is not a zero award. Results show filtered counts, the top ten selection reasons, and up to 50 matching rows in file order (not a random sample). A new Apply clears the previous judgment lookup.
+- Enter a **SAOS judgment ID** and click **Run** to inspect one row from the applied file, independently of the overview filters. This is where the notebook reads the normalized text and saved source, target, and feature JSON. Stage-specific target/feature statuses and reasons are in those JSON payloads, not scalar overview columns. Evidence and reviews retain their saved offsets and individual scores; the notebook does not compute new scores or call SAOS or a model.
+
+The overview only projects scalar columns. For example, a bounded sample can be collected without reading judgment text or decoding JSON:
+
+```python
+import polars as pl
+
+sample = (
+    pl.scan_parquet("/path/to/data.parquet", glob=False)
+    .filter(pl.col("eligible"))
+    .select("saos_id", "target_total_pln")
+    .limit(50)
+    .collect(engine="streaming")
+)
+```
+
+Streaming still retains collected results, and summary queries may scan all matching scalar values. Keep an explicit limit on review samples.
