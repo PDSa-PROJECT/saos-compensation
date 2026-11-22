@@ -3,8 +3,8 @@
 import pytest
 import yaml
 
-from dataset.embeddings.target_matching import TargetMatcher, candidate_sentences
-from dataset.extraction.model.configuration import load_config
+from saos_dataset.embeddings.target_matching import TargetMatcher, candidate_sentences
+from saos_dataset.extraction.model.configuration import load_config
 
 
 @pytest.mark.parametrize("before,after,expected", [

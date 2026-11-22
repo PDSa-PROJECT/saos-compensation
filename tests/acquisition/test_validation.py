@@ -1,6 +1,6 @@
 import pytest
 
-from dataset.acquisition.settings import search_settings
+from saos_dataset.acquisition.settings import search_settings
 
 
 CONFIG = {

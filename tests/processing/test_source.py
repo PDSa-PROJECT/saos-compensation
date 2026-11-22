@@ -4,12 +4,12 @@ import copy
 
 import pytest
 
-from dataset.acquisition.settings import load_config as acquisition_config
-from dataset.extraction.model.configuration import load_config
-from dataset.processing import source
-from dataset.storage import checkpoints
-from dataset.storage.files import write_json
-from dataset.storage.raw import page_path, read_page, write_page
+from saos_dataset.acquisition.settings import load_config as acquisition_config
+from saos_dataset.extraction.model.configuration import load_config
+from saos_dataset.processing import source
+from saos_dataset.storage import checkpoints
+from saos_dataset.storage.files import write_json
+from saos_dataset.storage.raw import page_path, read_page, write_page
 
 
 @pytest.fixture

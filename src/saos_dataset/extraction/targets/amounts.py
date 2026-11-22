@@ -1,0 +1,147 @@
+"""Monetary contexts, award verification and earlier-payment extraction."""
+
+import re
+
+from saos_dataset.extraction.model import decisions
+from saos_dataset.extraction.source import text as api
+from saos_dataset.extraction.source.passages import fragments
+from saos_dataset.extraction.source.text import sentence_fragments
+
+
+AWARD_FIELDS = ("zadoscuczynienie", "pozostale_odszkodowanie")
+
+def amount_contexts(text):
+    """
+    Yield complete sentence contexts with each PLN occurrence marked.
+
+    args:
+        text: Normalized Polish source text.
+
+    returns:
+        Iterator of marked amount contexts.
+    """
+    heading = list(api.REASONS.finditer(text))
+    boundary = heading[0].start() if len(heading) == 1 else None
+    # Use the complete sentence or list item; let the model determine the monetary role.
+    for paragraph in fragments(text, max(1, len(text))):
+        for sentence in sentence_fragments(paragraph):
+            for match in api.MONEY.finditer(sentence["text"]):
+                start, end = (
+                    sentence["start"] + match.start(),
+                    sentence["start"] + match.end(),
+                )
+                marked = (
+                    sentence["text"][: match.start()]
+                    + "<KWOTA>"
+                    + match[0]
+                    + "</KWOTA>"
+                    + sentence["text"][match.end() :]
+                )
+                yield {
+                    **sentence,
+                    "kwota": api.amount_in_pln(match),
+                    "amount_start": start,
+                    "amount_end": end,
+                    "marked": marked,
+                    "section": "sentencja"
+                    if boundary is not None and start < boundary
+                    else "uzasadnienie"
+                    if boundary is not None
+                    else "nieustalona",
+                }
+
+
+
+def finish_award(proposal, accepted, decision):
+    """
+    Retain confirmed award components or mark an unsupported proposal for review.
+
+    args:
+        proposal: Assembled award candidates.
+        accepted: Whether the award proposal was confirmed.
+        decision: Final model verification result.
+
+    returns:
+        Verified award result with unsupported values withheld.
+    """
+    result = {**proposal, "verification": decision, "confirmed": accepted}
+    if not accepted:
+        result["proposal"] = proposal
+        result.update(
+            {
+                field: "brak informacji"
+                for field in (*AWARD_FIELDS, "suma", "kwota_nierozdzielona")
+                if field in result
+            }
+        )
+        result["status"] = "model did not confirm the proposal; review required"
+    return result
+
+
+
+async def extract_award(server, text, diagnostics, config):
+    """
+    Parse a target directly from the embedding-selected sentence.
+
+    args:
+        server: Unused server retained by the extraction interface.
+        text: Full normalized judgment.
+        diagnostics: Retained compatibility argument; not used for target selection.
+        config: Effective pipeline settings.
+
+    returns:
+        Parsed amount, explicit recipient count and target-match diagnostics.
+    """
+    from .target_extraction import extract_targets
+
+    return await extract_targets(server, text, config)
+
+
+
+async def extract_prior_payment(server, match, config):
+    """
+    Resolve an earlier principal payment as an integer PLN feature, never a target.
+
+    args:
+        server: Local Basal extraction server.
+        match: Embedding-selected prior-payment sentence, or None.
+        config: Effective amount confidence threshold and model settings.
+
+    returns:
+        Confirmed prior principal rounded to whole PLN, or zero without confirmation.
+    """
+    from decimal import ROUND_HALF_UP, Decimal
+
+    if match is None:
+        return 0
+    sentence = match.get("sentence", match)
+    source = sentence["text"]
+    if "amount_start" in match:
+        start = match["amount_start"] - sentence["start"]
+        end = match["amount_end"] - sentence["start"]
+        if not 0 <= start < end <= len(source):
+            raise ValueError("Prior-payment amount lies outside its source context")
+        amount = api.MONEY.fullmatch(source[start:end])
+        if amount is None:
+            raise ValueError("Prior-payment amount does not match its source")
+    else:
+        amounts = list(api.MONEY.finditer(source))
+        if len(amounts) != 1:
+            return 0
+        amount = amounts[0]
+        start = amount.start()
+    prefix = " ".join(source[:start].split()[-5:])
+    if re.search(r"\b(?:ponadto|dodatkowo|kolejn)\w*", prefix, re.I) and not re.search(r"łącznie|w sumie|suma", source, re.I):
+        print("Prior-payment component has no explicit combined total; retaining the unconfirmed fallback.", flush=True)
+        return 0
+    value = api.amount_in_pln(amount)
+    answer = (await decisions.ask(
+        server,
+        {"oceniana_kwota": value, "fragment": source, "beneficjenci": match.get("beneficiaries", [])},
+        {"prior_payment": {"type": "noul", **config["questions"]["prior_payment"]}},
+        config,
+    ))["prior_payment"]
+    probability = answer.get("noul")
+    if probability is None or probability < config["system_one"]["amount_minimum_probability"]:
+        return 0
+    return int(Decimal(value).quantize(Decimal(1), rounding=ROUND_HALF_UP))

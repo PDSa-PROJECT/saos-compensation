@@ -35,7 +35,7 @@ saos-compensation/
 │   │   └── processing/            # local processing, features, targets and Basal settings
 │   └── training/                  # model input feature selection
 ├── src/                           # implementation
-│   └── dataset/                   # dataset preparation
+│   └── saos_dataset/              # dataset preparation
 │       ├── cli/                   # argument parsing and two entry points
 │       ├── acquisition/           # resumable raw SAOS downloads
 │       ├── processing/            # local selection, validation, metadata and extraction orchestration
@@ -56,7 +56,7 @@ saos-compensation/
 
 ## Package boundaries
 
-The installed package is `dataset`, discovered under `src/`. Acquisition, extraction, embeddings and preprocessing remain reusable independently of the command.
+The installed package is `saos_dataset`, discovered under `src/`. Acquisition, extraction, embeddings and preprocessing remain reusable independently of the command.
 
 See the [development guide](docs/development.md#package-boundaries) for module responsibilities and runtime dependencies.
 
@@ -97,9 +97,9 @@ uv run --no-sync process-data --input-path tmp/test --output-path tmp/test-proce
 
 For a small first download, add `--max-pages 1` (at most 100 judgments, plus court metadata). Raw downloading imports no model code and needs no Basal installation or accelerator. `uv sync --locked` is sufficient for this stage. `process-data` uses the configured models and local source files; it makes no SAOS requests. Missing model weights and the optional locality snapshot may still require network access.
 
-The equivalent module entry points are `python -m dataset.cli` and `python -m dataset.cli.process`. The former `get-data` command is replaced by these two commands.
+The equivalent module entry points are `python -m saos_dataset.cli` and `python -m saos_dataset.cli.process`. The former `get-data` command is replaced by these two commands.
 
-Dataset paths accept absolute locations, such as `process-data --input-path /tmp/raw/ --output-path /tmp/processed/`, and relative paths, including `..`. Relative paths are resolved from the project root. Processing input and output directories must not overlap, including through symlinks.
+Dataset paths accept absolute locations, such as `process-data --input-path /tmp/raw/ --output-path /tmp/processed/`, and relative paths, including `..`. Relative paths use the working directory. When launching outside the checkout, supply `--config-dir` and dataset paths explicitly. Processing input and output directories must not overlap, including through symlinks.
 
 ### Download arguments
 
@@ -131,7 +131,7 @@ For `process-data`, debug adds `source.txt` and `model_calls.json` to retained c
 
 Processing checkpoints and temporary `pending/` state preserve progress and completed model decisions in both modes. Pending state is removed after acceptance or rejection. See [output and resume details](docs/acquisition.md).
 
-Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, root `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
+Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, working-directory `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Cache locations are runtime settings listed in `.env.example`. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
 
 ## Documentation
 

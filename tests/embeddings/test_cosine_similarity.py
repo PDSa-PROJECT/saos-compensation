@@ -6,7 +6,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 
-from dataset.embeddings.cosine_similarity import cosine_similarity
+from saos_dataset.embeddings.cosine_similarity import cosine_similarity
 
 
 def test_pairwise_similarity_matches_known_angles_without_gradients():

@@ -4,7 +4,7 @@
 
 ## Package boundaries
 
-`dataset.cli.main` parses raw-download arguments and delegates to synchronous `dataset.acquisition.pipeline.run`. `dataset.cli.process` parses processing arguments and delegates to asynchronous `dataset.processing.pipeline.run`. CLI modules own parsing and exit codes, not business logic.
+`saos_dataset.cli.main` parses raw-download arguments and delegates to synchronous `saos_dataset.acquisition.pipeline.run`. `saos_dataset.cli.process` parses processing arguments and delegates to asynchronous `saos_dataset.processing.pipeline.run`. CLI modules own parsing and exit codes, not business logic.
 
 `clients/` owns HTTP access, read-only SQLite queries and the Basal model/worker lifecycle. `storage/` owns local records, checkpoints, pending state, locality snapshots and fitted preprocessing artifacts. `acquisition/` owns raw download settings and durable pagination. `processing/source.py` selects and validates local cases and joins saved metadata; `processing/metadata.py` enriches predictors, and `processing/pipeline.py` coordinates extraction/admission. `storage/raw.py` owns raw page persistence and snapshot identity. PostgreSQL and S3 access are not implemented.
 
@@ -14,7 +14,7 @@ These are ordinary module boundaries and explicit dependencies; no container or 
 
 ## Installed commands
 
-`pyproject.toml` registers `get-raw-data = "dataset.cli.main:main"` and `process-data = "dataset.cli.process:main"`. After switching branches that change these entry points, repeat the platform-specific `uv sync --locked` command from [Setup](../README.md#setup). `uv run --no-sync` uses the existing installation and does not regenerate console scripts.
+`pyproject.toml` registers `get-raw-data = "saos_dataset.cli.main:main"` and `process-data = "saos_dataset.cli.process:main"`. After switching branches that change these entry points, repeat the platform-specific `uv sync --locked` command from [Setup](../README.md#setup). `uv run --no-sync` uses the existing installation and does not regenerate console scripts.
 
 The current src layout generates package metadata under `src/`. Obsolete root-level `saos_compensation.egg-info` from earlier installs can shadow the installed entry-point metadata; preserve that old directory outside the checkout before inspecting the refreshed installation.
 

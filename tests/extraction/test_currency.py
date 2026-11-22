@@ -13,7 +13,7 @@ def test_currency_prefix_does_not_match_unrelated_words(word):
     returns:
         None.
     """
-    from dataset.extraction.source.text import CURRENCY, MONEY
+    from saos_dataset.extraction.source.text import CURRENCY, MONEY
 
     assert not CURRENCY.search(word)
     assert not MONEY.search(f"100 {word}")

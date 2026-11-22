@@ -4,10 +4,10 @@ import asyncio
 
 import pytest
 
-from dataset.extraction import basal_filtering as basal
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.model import decisions
-from dataset.extraction.targets import amounts
+from saos_dataset.extraction import basal_filtering as basal
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import decisions
+from saos_dataset.extraction.targets import amounts
 
 
 @pytest.mark.parametrize(

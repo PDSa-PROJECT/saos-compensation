@@ -4,8 +4,8 @@ import json
 import pytest
 import requests
 
-from dataset.acquisition.settings import search_settings
-from dataset.clients import api
+from saos_dataset.acquisition.settings import search_settings
+from saos_dataset.clients import api
 
 CONFIG = {
     "max_age_years": 10,

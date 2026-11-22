@@ -1,0 +1,82 @@
+"""Coordinate target, prior-payment, instance and feature extraction."""
+
+import hashlib
+
+from .targets import amounts
+from .model import decisions
+from .source import text as api
+from .features import extract_features
+from .quality import target_rejection_reason
+
+
+async def extract(server, text, config, identifier):
+    """
+    Extract source-grounded factual descriptions and separate monetary targets.
+
+    args:
+        server: Local inference server.
+        text: Normalized Polish source text.
+        config: Effective pipeline or acquisition settings.
+        identifier: Stable judgment identifier.
+
+    returns:
+        Feature and target results, or only id and award when the target is rejected.
+    """
+    print(f"ID {identifier}: extracting target", flush=True)
+    award = await amounts.extract_award(server, text, [], config)
+    if (
+        award.get("excluded")
+        or not config["processing"]["debug"]
+        and target_rejection_reason(award, config) is not None
+    ):
+        return {"id": identifier, "award": award}
+    return await extract_predictors(server, text, config, identifier, award)
+
+
+async def extract_predictors(server, text, config, identifier, award):
+    """Extract predictor work after a target award has already been prepared.
+
+    args:
+        server: Local inference server.
+        text: Normalized Polish source text.
+        config: Effective pipeline or acquisition settings.
+        identifier: Stable judgment identifier.
+        award: Existing extracted award and target context.
+
+    returns:
+        Predictor features combined with the supplied award and stable source hash.
+    """
+    prior_features = {}
+    if "prior_payment" in config["metadata_fields"]:
+        prior_features["prior_payment"] = await amounts.extract_prior_payment(
+            server, {**award["target_matches"]["prior_payment"], "beneficiaries": award.get("beneficiaries", [])}
+            if award.get("target_matches", {}).get("prior_payment") else None, config
+        )
+    threshold = config["system_one"]["minimum_probability"]
+    heading = api.REASONS.search(text)
+    header = text[: min(heading.start() if heading else len(text), 4000)]
+    instance = await decisions.ask(
+        server,
+        header,
+        {"instancja": {"type": "choice", **config["questions"]["instance"]}},
+        config,
+    )
+    instance = instance["instancja"]
+    features = await extract_features(server, text, {**config, "beneficiaries": award.get("beneficiaries", [])}, identifier)
+    return {
+        "id": identifier,
+        "award": award,
+        **prior_features,
+        **features,
+        "instance": {
+            "value": instance["choice"]
+            if instance["choice"] != "nieustalona"
+            and instance["confidence"] >= threshold
+            else "brak informacji",
+            "decision": instance,
+            "source": header,
+            "status": "review required",
+        },
+        "status": "candidates for review; not approved for training",
+        "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
+    }

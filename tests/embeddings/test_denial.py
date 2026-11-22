@@ -5,8 +5,8 @@ import math
 import pytest
 import torch
 
-from dataset.embeddings import target_matching
-from dataset.extraction.model.configuration import load_config
+from saos_dataset.embeddings import target_matching
+from saos_dataset.extraction.model.configuration import load_config
 
 
 class Encoder:

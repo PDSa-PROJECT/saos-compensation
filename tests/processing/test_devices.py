@@ -2,8 +2,8 @@ import sys
 
 import pytest
 
-from dataset.processing import pipeline
-from dataset.extraction.model import configuration as config_module
+from saos_dataset.processing import pipeline
+from saos_dataset.extraction.model import configuration as config_module
 
 
 @pytest.mark.parametrize(

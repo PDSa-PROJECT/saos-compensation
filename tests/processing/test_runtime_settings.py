@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dataset.extraction.model.configuration import load_config, read_config
-from dataset.settings import RuntimeSettings
+from saos_dataset.extraction.model.configuration import load_config, read_config
+from saos_dataset.settings import RuntimeSettings
 
 
 def test_source_precedence(config_directory, monkeypatch):
@@ -94,16 +94,52 @@ def test_checkpoint_compatibility(config_directory, monkeypatch, output_root):
     returns:
         None.
     """
-    from dataset.storage import checkpoints
+    from saos_dataset.storage import checkpoints
 
     overrides = {"output_path": "dataset"}
     config = load_config(config_directory, overrides)
-    checkpoint = checkpoints.load_checkpoint(config)
+    legacy_config = {key: value for key, value in config.items() if key != "paths"}
+    checkpoint = checkpoints.load_checkpoint(legacy_config)
     checkpoints.save_checkpoint(output_root / "dataset", checkpoint)
     monkeypatch.setenv("PROCESSING_TIMEOUT", "99")
     monkeypatch.setenv("PROCESSING_DEBUG", "false")
+    monkeypatch.setenv("MODEL_CACHE_PATH", str(output_root / "other-model-cache"))
+    monkeypatch.setenv("ENCODER_CACHE_PATH", str(output_root / "other-encoder-cache"))
+    monkeypatch.setenv("LOCALITIES_PATH", str(output_root / "other-localities"))
     assert checkpoints.load_checkpoint(load_config(config_directory, overrides)) == checkpoint
     device = "cpu" if config["system_one"]["device"] != "cpu" else "mps"
     monkeypatch.setenv("BASAL_DEVICE", device)
     with pytest.raises(ValueError, match="Extraction settings changed"):
         checkpoints.load_checkpoint(load_config(config_directory, overrides))
+
+
+def test_paths_are_supplied_without_checkout_discovery(config_directory, tmp_path, monkeypatch):
+    """Load explicit config and runtime cache paths from an unrelated launch directory.
+
+    args:
+        config_directory: Explicit processing YAML directory.
+        tmp_path: Isolated filesystem location.
+        monkeypatch: Scoped working-directory and dotenv configuration.
+
+    returns:
+        None.
+    """
+    working = tmp_path / "launch"
+    working.mkdir()
+    monkeypatch.chdir(working)
+    monkeypatch.setitem(RuntimeSettings.model_config, "env_file", ".env")
+    (working / ".env").write_text(
+        "MODEL_CACHE_PATH=cache/basal\nENCODER_CACHE_PATH=cache/encoder\n"
+        "LOCALITIES_PATH=cache/localities\n"
+    )
+    config = load_config(config_directory)
+    assert config["paths"] == {
+        "model_cache_path": "cache/basal",
+        "encoder_cache_path": "cache/encoder",
+        "localities_path": "cache/localities",
+    }
+    with pytest.raises(FileNotFoundError):
+        load_config()
+    monkeypatch.setenv("ENCODER_CACHE_PATH", " ")
+    with pytest.raises(ValueError):
+        load_config(config_directory)

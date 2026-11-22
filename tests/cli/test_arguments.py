@@ -4,10 +4,10 @@ from datetime import date
 
 import pytest
 
-from dataset.acquisition.settings import load_config, search_settings
-from dataset.cli import main as raw_cli
-from dataset.cli import process as process_cli
-from dataset.extraction.model.configuration import load_config as load_processing
+from saos_dataset.acquisition.settings import load_config, search_settings
+from saos_dataset.cli import main as raw_cli
+from saos_dataset.cli import process as process_cli
+from saos_dataset.extraction.model.configuration import load_config as load_processing
 
 
 @pytest.mark.parametrize("arguments,expected", [

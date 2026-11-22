@@ -12,7 +12,7 @@ def test_output_limit_counts_existing_files_and_persists_across_resumes(tmp_path
     returns:
         None.
     """
-    from dataset.storage.files import (
+    from saos_dataset.storage.files import (
         StorageLimitError,
         output_limit,
         write_bytes,
@@ -42,7 +42,7 @@ def test_output_limit_preserves_existing_record_and_counts_atomic_temporary_file
     returns:
         None.
     """
-    from dataset.storage.files import (
+    from saos_dataset.storage.files import (
         StorageLimitError,
         output_limit,
         write_bytes,

@@ -2,7 +2,7 @@
 
 import pytest
 
-from dataset.extraction.source import passages
+from saos_dataset.extraction.source import passages
 
 
 @pytest.mark.parametrize(

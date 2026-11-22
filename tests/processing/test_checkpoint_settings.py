@@ -3,13 +3,12 @@
 import pytest
 import yaml
 
-from dataset.extraction.model import configuration
+from saos_dataset.extraction.model import configuration
 
 
 def test_changed_question_invalidates_checkpoint(
     config_directory,
     output_root,
-    monkeypatch,
     tmp_path,
 ):
     """Resume unchanged settings and reject a changed question on resume.
@@ -17,17 +16,15 @@ def test_changed_question_invalidates_checkpoint(
     args:
         config_directory: Isolated processing YAML directory.
         output_root: Prepared raw input and processing output root.
-        monkeypatch: Scoped repository-root replacement.
         tmp_path: Temporary dataset root.
 
     returns:
         None.
     """
-    from dataset.storage import checkpoints
-    from dataset.storage.files import write_json
+    from saos_dataset.storage import checkpoints
+    from saos_dataset.storage.files import write_json
 
     config = configuration.load_config(config_directory)
-    monkeypatch.setattr(checkpoints, "ROOT", tmp_path)
     checkpoint = checkpoints.load_checkpoint(config)
     write_json(
         tmp_path / config["processing"]["output_path"] / "checkpoint.json", checkpoint
@@ -52,7 +49,7 @@ def test_changed_amount_context_invalidates_processing_checkpoint(config_directo
     returns:
         None.
     """
-    from dataset.storage import checkpoints
+    from saos_dataset.storage import checkpoints
 
     config = configuration.load_config(config_directory)
     state = checkpoints.load_checkpoint(config)

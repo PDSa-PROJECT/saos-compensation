@@ -2,7 +2,7 @@
 
 import pytest
 
-from dataset.embeddings import target_matching
+from saos_dataset.embeddings import target_matching
 
 KEYWORDS = {
     "judgment": ["zasądz"],
@@ -48,7 +48,7 @@ def test_currency_inflections_are_candidates_and_parse_as_pln(unit):
     returns:
         None.
     """
-    from dataset.extraction.source.text import CURRENCY, MONEY, amount_in_pln
+    from saos_dataset.extraction.source.text import CURRENCY, MONEY, amount_in_pln
 
     text = f"Zasądza 100 {unit}."
     assert len(target_matching.candidate_sentences(text, KEYWORDS)) == 1
@@ -115,7 +115,7 @@ def test_prefix_keeps_earlier_keyword_and_leaves_feature_sentences_intact():
     returns:
         None.
     """
-    from dataset.extraction.source.text import sentence_fragments
+    from saos_dataset.extraction.source.text import sentence_fragments
 
     text = "Zasądza świadczenie, rachunek opiewa na 100 zł."
     (candidate,) = target_matching.candidate_sentences(text, KEYWORDS)

@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from dataset.processing.validation import validate_judgment
+from saos_dataset.processing.validation import validate_judgment
 
 
 @pytest.mark.parametrize("defect", ["id", "date", "court", "case", "text", "type"])

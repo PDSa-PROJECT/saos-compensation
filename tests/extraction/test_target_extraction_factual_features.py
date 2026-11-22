@@ -2,10 +2,10 @@
 
 import asyncio
 
-from dataset.extraction import basal_filtering as basal
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.targets import amounts
-from dataset.extraction.model import decisions
+from saos_dataset.extraction import basal_filtering as basal
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.targets import amounts
+from saos_dataset.extraction.model import decisions
 
 
 def test_prior_payment_feature_is_resolved_for_debug_case_without_target(monkeypatch):

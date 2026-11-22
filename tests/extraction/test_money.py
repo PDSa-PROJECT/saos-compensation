@@ -1,7 +1,7 @@
 
 import pytest
 
-from dataset.extraction.source.text import CURRENCY, MONEY, amount_in_pln
+from saos_dataset.extraction.source.text import CURRENCY, MONEY, amount_in_pln
 
 
 @pytest.mark.parametrize(
@@ -113,7 +113,7 @@ def test_amount_spelling_preserves_explicit_pln(source, expected):
     returns:
         None.
     """
-    from dataset.extraction.source.text import MONEY, amount_in_pln
+    from saos_dataset.extraction.source.text import MONEY, amount_in_pln
 
     match = MONEY.search(source)
     assert match is not None

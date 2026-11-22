@@ -1,7 +1,7 @@
 
 import pytest
 
-from dataset.clients import api
+from saos_dataset.clients import api
 
 
 @pytest.mark.parametrize("debug", [False, True])
@@ -23,7 +23,7 @@ def test_locality_download_is_retained_only_for_debug(
     returns:
         None.
     """
-    from dataset.storage import localities
+    from saos_dataset.storage import localities
 
     content = locality_database.read_bytes()
 

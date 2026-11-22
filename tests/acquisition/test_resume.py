@@ -5,25 +5,25 @@ import json
 import pytest
 import requests
 
-from dataset.acquisition import download
-from dataset.acquisition.settings import load_config
-from dataset.storage import checkpoints
-from dataset.storage.raw import page_path, read_page
+from saos_dataset.acquisition import download
+from saos_dataset.acquisition.settings import load_config
+from saos_dataset.storage import checkpoints
+from saos_dataset.storage.raw import page_path, read_page
 
 
 @pytest.fixture
-def raw_download(monkeypatch, tmp_path):
+def raw_download(monkeypatch, tmp_path, project_root):
     """Isolate raw output and replace only the external HTTP boundary.
 
     args:
         monkeypatch: Scoped overrides.
         tmp_path: Isolated output root.
+        project_root: Pytest checkout containing the acquisition defaults.
 
     returns:
         Settings and captured page requests.
     """
-    for module in (download, checkpoints):
-        monkeypatch.setattr(module, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
     calls = []
 
     def courts(number, session, timeout):
@@ -62,7 +62,7 @@ def raw_download(monkeypatch, tmp_path):
 
     monkeypatch.setattr(download.api, "search_courts", courts)
     monkeypatch.setattr(download.api, "search_judgments", judgments)
-    return load_config(overrides={"download_path": "raw", "max_gib": 0, "debug": False, "timeout": 60}), calls
+    return load_config(project_root / "configs/dataset/acquisition", overrides={"download_path": "raw", "max_gib": 0, "debug": False, "timeout": 60}), calls
 
 
 @pytest.mark.parametrize("absolute", [False, True])

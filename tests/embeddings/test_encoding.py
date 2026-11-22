@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dataset.embeddings import create_embeddings, encoding
+from saos_dataset.embeddings import create_embeddings, encoding
 
 SETTINGS = {
     "model": "test",
@@ -61,16 +61,17 @@ def test_invalid_encoder_settings_fail_before_loading(monkeypatch, change):
         create_embeddings(["Text"], {**SETTINGS, **change})
 
 
-def test_original_texts_and_order_are_preserved_and_models_reused(monkeypatch):
+def test_original_texts_and_order_are_preserved_and_models_reused(monkeypatch, tmp_path):
     """Reuse encoder-only settings without altering monetary values or source strings.
 
     args:
         monkeypatch: Scoped encoder replacement.
+        tmp_path: Explicit alternative model cache directory.
 
     returns:
         None.
     """
-    loaded, batches = [], []
+    loaded, batches, caches = [], [], []
     vectors = object()
 
     def encode(texts):
@@ -85,16 +86,18 @@ def test_original_texts_and_order_are_preserved_and_models_reused(monkeypatch):
         batches.append(texts)
         return vectors
 
-    def load(settings):
+    def load(settings, cache_dir):
         """Record normalized settings without downloading model weights.
 
         args:
             settings: Encoder-only model and runtime configuration.
+            cache_dir: Explicit model cache location.
 
         returns:
             Controlled encoder.
         """
         loaded.append(settings)
+        caches.append(cache_dir)
         return SimpleNamespace(encode=encode)
 
     monkeypatch.setattr(encoding, "SentenceEncoder", load)
@@ -108,3 +111,8 @@ def test_original_texts_and_order_are_preserved_and_models_reused(monkeypatch):
     assert batches == [texts, [texts[1]]]
     create_embeddings(texts, {**SETTINGS, "revision": "other"})
     assert len(loaded) == 2
+    create_embeddings(texts, SETTINGS, cache_dir=tmp_path)
+    assert len(loaded) == 3
+    assert caches[-1] == str(tmp_path.resolve())
+    create_embeddings(texts, SETTINGS, cache_dir=tmp_path)
+    assert len(loaded) == 3
