@@ -3,10 +3,10 @@
 import copy
 from pathlib import Path
 
-from ...configuration import read_config
+from saos_dataset.configuration import read_config
 
-from ...embeddings.settings import TargetSettings
-from ...settings import RuntimeSettings
+from saos_dataset.embeddings.settings import TargetSettings
+from saos_dataset.settings import RuntimeSettings
 from .prompts import DEFAULTS
 from .settings import BasalSettings, FeatureSettings, MODEL_REVISIONS
 
@@ -24,7 +24,7 @@ def load_config(directory=None, overrides=None):
     returns:
         Effective validated configuration.
     """
-    from ...processing.settings import validate_settings as validate_processing_settings
+    from saos_dataset.processing.settings import validate_settings as validate_processing_settings
 
     directory = (
         Path(directory)

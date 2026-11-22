@@ -3,9 +3,9 @@
 import re
 from decimal import Decimal
 
-from ...embeddings.target_matching import match_targets
-from ..model import decisions
-from ..source.text import MONEY, amount_in_pln
+from saos_dataset.embeddings.target_matching import match_targets
+from saos_dataset.extraction.model import decisions
+from saos_dataset.extraction.source.text import MONEY, amount_in_pln
 
 
 def count_people(value):

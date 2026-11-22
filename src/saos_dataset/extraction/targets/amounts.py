@@ -2,10 +2,10 @@
 
 import re
 
-from ..model import decisions
-from ..source import text as api
-from ..source.passages import fragments
-from ..source.text import sentence_fragments
+from saos_dataset.extraction.model import decisions
+from saos_dataset.extraction.source import text as api
+from saos_dataset.extraction.source.passages import fragments
+from saos_dataset.extraction.source.text import sentence_fragments
 
 
 AWARD_FIELDS = ("zadoscuczynienie", "pozostale_odszkodowanie")

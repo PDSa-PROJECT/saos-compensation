@@ -7,7 +7,7 @@ from sklearn.base import BaseEstimator
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 
-from ..storage.preprocessing import load_state, save_state
+from saos_dataset.storage.preprocessing import load_state, save_state
 from .io.configuration import validate_config
 from .transforms.numeric import numeric_pipeline, numeric_values, transformed_values
 from .transforms.rules import FIELD_RULES

@@ -1,6 +1,6 @@
 """Independent local processing paths and operational settings."""
 
-from ..configuration import ROOT, validate_path
+from saos_dataset.configuration import ROOT, validate_path
 
 
 def validate_settings(settings):

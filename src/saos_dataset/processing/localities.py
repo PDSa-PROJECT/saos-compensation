@@ -18,7 +18,7 @@ def load_locality_context(fields, directory, timeout):
         return None
     import morfeusz2
 
-    from ..storage.localities import load_localities
+    from saos_dataset.storage.localities import load_localities
 
     rows, metadata = load_localities(directory, timeout=timeout)
     return rows, morfeusz2.Morfeusz(), metadata

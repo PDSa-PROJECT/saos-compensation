@@ -2,7 +2,7 @@
 
 from pydantic import Field, field_validator
 
-from ..settings import Device, NonblankString, Probability, Settings
+from saos_dataset.settings import Device, NonblankString, Probability, Settings
 
 TARGET_CLASSES = ("judgment", "request")
 EXCLUDED_CLASSES = ("prior_payment", "procedural_costs", "mixed", "other_payments")

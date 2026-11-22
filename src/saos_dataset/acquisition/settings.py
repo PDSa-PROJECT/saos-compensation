@@ -6,8 +6,8 @@ from pathlib import Path
 
 from pydantic import Field, field_validator
 
-from ..settings import FiniteNumber, NonblankString, Settings, RuntimeSettings
-from ..configuration import ROOT, read_config, validate_path
+from saos_dataset.settings import FiniteNumber, NonblankString, Settings, RuntimeSettings
+from saos_dataset.configuration import ROOT, read_config, validate_path
 
 
 class AcquisitionSettings(Settings):

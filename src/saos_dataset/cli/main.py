@@ -2,7 +2,7 @@
 
 import argparse
 
-from ..acquisition.pipeline import run
+from saos_dataset.acquisition.pipeline import run
 
 
 def parse_arguments(arguments=None):
@@ -76,7 +76,7 @@ def main():
     returns:
         None.
     """
-    from ..acquisition.settings import load_config
+    from saos_dataset.acquisition.settings import load_config
 
     options = vars(parse_arguments())
     directory = options.pop("config_dir")

@@ -32,8 +32,8 @@ def main():
     returns:
         None.
     """
-    from ..extraction.model.configuration import load_config
-    from ..processing.pipeline import run
+    from saos_dataset.extraction.model.configuration import load_config
+    from saos_dataset.processing.pipeline import run
 
     options = vars(parse_arguments())
     directory = options.pop("config_dir")

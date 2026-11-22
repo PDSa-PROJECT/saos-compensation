@@ -2,7 +2,7 @@
 
 from pydantic import field_validator
 
-from ..settings import Settings
+from saos_dataset.settings import Settings
 from .transforms.rules import FIELD_RULES, TEXT_FIELDS
 
 

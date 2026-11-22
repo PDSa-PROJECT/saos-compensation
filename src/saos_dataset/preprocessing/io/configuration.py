@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from ..settings import PreprocessingSettings
+from saos_dataset.preprocessing.settings import PreprocessingSettings
 
 
 def validate_config(settings):

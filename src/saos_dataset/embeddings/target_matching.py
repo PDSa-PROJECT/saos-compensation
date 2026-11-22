@@ -5,7 +5,7 @@ import re
 from functools import lru_cache, partial
 from itertools import batched
 
-from ..extraction.source.text import MONEY, REASONS, sentence_fragments
+from saos_dataset.extraction.source.text import MONEY, REASONS, sentence_fragments
 from .encoding import create_embeddings
 from .settings import EXCLUDED_CLASSES, PATTERN_CLASSES, TARGET_CLASSES, TargetSettings
 

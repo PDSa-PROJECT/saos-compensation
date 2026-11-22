@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from ..extraction.quality import rejection_reason
+from saos_dataset.extraction.quality import rejection_reason
 from .files import remove_tree, write_bytes, write_json
 
 
