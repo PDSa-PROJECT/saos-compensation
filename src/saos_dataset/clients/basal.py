@@ -78,8 +78,28 @@ async def open_worker(server):
 
 
 @asynccontextmanager
+async def open_server(model, cache, *, model_loader=None, server_factory=None):
+    """Load one model and keep its server worker alive for the consuming stage.
+
+    args:
+        model: Effective model settings after device availability validation.
+        cache: Model snapshot cache directory.
+        model_loader: Optional snapshot loader; resolved at runtime when omitted.
+        server_factory: Optional inference server factory for the loaded snapshot.
+
+    returns:
+        Async context yielding the running inference server.
+    """
+    model_loader = load_model if model_loader is None else model_loader
+    server_factory = create_server if server_factory is None else server_factory
+    server = server_factory(model, model_loader(model, cache))
+    async with open_worker(server):
+        yield server
+
+
+@asynccontextmanager
 async def open_extractor(config, cache, *, model_loader=None, server_factory=None):
-    """Keep one model worker alive and close it on success, failure or cancellation.
+    """Keep the combined target and feature extractor on one shared server.
 
     args:
         config: Effective extraction settings.
@@ -90,10 +110,6 @@ async def open_extractor(config, cache, *, model_loader=None, server_factory=Non
     returns:
         Async context yielding an extraction callable accepting text and identifier.
     """
-    model_loader = load_model if model_loader is None else model_loader
-    server_factory = create_server if server_factory is None else server_factory
-    model = config["system_one"]
-    server = server_factory(model, model_loader(model, cache))
 
     async def extract_record(text, identifier):
         """Extract a judgment using the shared server and fixed configuration.
@@ -107,5 +123,8 @@ async def open_extractor(config, cache, *, model_loader=None, server_factory=Non
         """
         return await extract(server, text, config, identifier)
 
-    async with open_worker(server):
+    async with open_server(
+        config["system_one"], cache,
+        model_loader=model_loader, server_factory=server_factory,
+    ) as server:
         yield extract_record

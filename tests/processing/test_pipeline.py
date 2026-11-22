@@ -107,6 +107,43 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
         assert "final award verification not run" in output
     directory = tmp_path / "tmp/processed"
     path = directory / "42"
+    from saos_workflows.operations.features import extract_feature_rows
+
+    source_record = next(record_source())
+    prepared = asyncio.run(extract(source_record["text"], source_record["id"]))
+    predictor_calls = []
+
+    async def predictors(server, text, settings, identifier, award):
+        """Consume the prepared target and return the same controlled predictors.
+
+        args:
+            server: Unused controlled inference server.
+            text: Original source text.
+            settings: Effective extraction configuration.
+            identifier: Stable source identifier.
+            award: Target passed through the row handoff.
+
+        returns:
+            Controlled extraction result without another target call.
+        """
+        assert award == prepared["award"]
+        assert text == source_record["text"] and identifier == 42 and settings == config
+        predictor_calls.append(identifier)
+        return prepared
+
+    row = {
+        "saos_id": 42, "selection_status": "selected",
+        "selected_record_json": json.dumps(source_record), "judgment_text": source_record["text"],
+        "target_json": json.dumps(prepared["award"]), "features_json": None, "eligible": None,
+    }
+    enriched = asyncio.run(extract_feature_rows([row], config, None, extractor=predictors))[0]
+    payload = json.loads(enriched["features_json"])
+    assert enriched["target_json"] == row["target_json"]
+    assert enriched["eligible"] == (path.exists() and json.loads((path / "award.json").read_text())["valid"])
+    assert ("metadata_sources" in payload) == path.exists()
+    skipped = (low_confidence or missing_target) and not debug
+    assert predictor_calls == ([] if skipped else [42])
+    assert (payload["feature_status"] == "skipped") == skipped
     if text_field != "damage" or sparse_features or ((low_confidence or missing_target) and not debug):
         assert not path.exists()
         assert fake_extractor.stopped

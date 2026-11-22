@@ -7,12 +7,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..clients.basal import open_extractor
-from ..extraction.quality import feature_rejection_reason, rejection_reason
+from ..extraction.quality import admission_decision
 from ..storage.checkpoints import load_checkpoint, save_checkpoint
 from ..storage.files import StorageLimitError, output_limit
 from ..storage.records import remove_pending, save_pending, write_result
 from .source import records_from_raw
 from .metadata import add_metadata_features
+from .localities import load_locality_context
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -105,24 +106,17 @@ async def process(config, *, extractor=None, record_source=None):
     check_device(config["system_one"]["device"])
     check_device(config["embedding"]["device"])
     save_checkpoint(directory, checkpoint)
-    localities = None
-    if "court_locality_size" in config["metadata_fields"]:
-        import morfeusz2
-
-        from ..storage.localities import load_localities
-
-        rows, metadata = load_localities(
-            ROOT / "tmp" / "gugik",
-            timeout=config["processing"]["timeout"],
-        )
-        digest = metadata["sha256"]
+    localities = load_locality_context(
+        config["metadata_fields"], ROOT / "tmp" / "gugik", config["processing"]["timeout"]
+    )
+    if localities is not None:
+        digest = localities[2]["sha256"]
         if checkpoint["localities_sha256"] not in (None, digest):
             raise ValueError(
                 "GUGiK snapshot changed since the checkpoint; use a different output_path"
             )
         checkpoint["localities_sha256"] = digest
         save_checkpoint(directory, checkpoint)
-        localities = rows, morfeusz2.Morfeusz(), metadata
     if extractor is None:
         extractor = open_extractor(config, model_cache)
     record_source = records_from_raw if record_source is None else record_source
@@ -155,20 +149,8 @@ async def process(config, *, extractor=None, record_source=None):
                     finally:
                         decisions.MODEL_CALLS.reset(token)
                         decisions.DECISION_CACHE.reset(cache_token)
-                    feature_reason = feature_rejection_reason(result, config)
-                    reason = rejection_reason(result, config)
-                    if feature_reason and reason != feature_reason:
-                        detail = (
-                            feature_reason
-                            if result.get(
-                                "fields_evaluated", bool(result.get("features"))
-                            )
-                            else "text feature extraction skipped"
-                        )
-                        reason = f"{reason}; {detail}"
-                    if reason is not None and (
-                        not config["processing"]["debug"] or feature_reason
-                    ):
+                    retained, reason = admission_decision(result, config)
+                    if not retained:
                         record["rejected"] = True
                         summary["rejected_records"] += 1
                         remove_pending(pending)

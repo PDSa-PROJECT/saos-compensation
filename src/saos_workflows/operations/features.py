@@ -4,11 +4,12 @@ import asyncio
 import json
 from pathlib import Path
 
-from saos_dataset.clients.basal import create_server, load_model, open_worker
+from saos_dataset.clients.basal import open_server
 from saos_dataset.extraction.basal_filtering import extract_predictors
 from saos_dataset.extraction.model.configuration import load_config
-from saos_dataset.extraction.quality import feature_rejection_reason, rejection_reason, target_rejection_reason
+from saos_dataset.extraction.quality import admission_decision, target_rejection_reason
 from saos_dataset.processing.metadata import add_metadata_features
+from saos_dataset.processing.localities import load_locality_context
 from saos_dataset.processing.pipeline import check_device
 
 from .rows import read_rows, write_rows
@@ -47,12 +48,9 @@ async def extract_feature_rows(rows, config, server, *, localities=None, extract
         if record["id"] != row["saos_id"] or record["text"] != row["judgment_text"]:
             raise ValueError(f"Selected record does not match source row {row['saos_id']}")
         result = await extractor(server, record["text"], config, row["saos_id"], award)
-        feature_reason = feature_rejection_reason(result, config)
-        reason = rejection_reason(result, config)
-        if feature_reason and reason != feature_reason:
-            reason = f"{reason}; {feature_reason}"
+        retained, reason = admission_decision(result, config)
         accepted = reason is None
-        if accepted or (config["processing"]["debug"] and not feature_reason):
+        if retained:
             add_metadata_features(result, record, config["metadata_fields"], localities)
         payload = {key: value for key, value in result.items() if key != "award"}
         payload.update(feature_status="accepted" if accepted else "rejected", feature_reason=reason)
@@ -78,20 +76,12 @@ async def extract_with_worker(rows, config):
         for row in rows
     ):
         return await extract_feature_rows(rows, config, None)
-    localities = None
-    if "court_locality_size" in config["metadata_fields"]:
-        import morfeusz2
-
-        from saos_dataset.storage.localities import load_localities
-
-        root = Path(__file__).resolve().parents[3]
-        locality_rows, metadata = load_localities(root / "tmp" / "gugik", timeout=config["processing"]["timeout"])
-        localities = (locality_rows, morfeusz2.Morfeusz(), metadata)
-    check_device(config["system_one"]["device"])
-    model = config["system_one"]
     root = Path(__file__).resolve().parents[3]
-    server = create_server(model, load_model(model, root / "basal_weights"))
-    async with open_worker(server):
+    localities = load_locality_context(
+        config["metadata_fields"], root / "tmp" / "gugik", config["processing"]["timeout"]
+    )
+    check_device(config["system_one"]["device"])
+    async with open_server(config["system_one"], root / "basal_weights") as server:
         return await extract_feature_rows(rows, config, server, localities=localities)
 
 
