@@ -7,6 +7,7 @@ from typing import Annotated
 
 from pydantic import ConfigDict, Field, validate_call
 
+from saos_dataset.acquisition.settings import search_query
 from saos_dataset.clients import api
 from saos_dataset.processing.source import read_divisions, select_judgment
 from saos_dataset.settings import FiniteNumber, NonblankString
@@ -85,7 +86,7 @@ def collect_rows(start, end, phrases, max_records, timeout, session):
     while True:
         payload = api.search_courts(page, session=session, timeout=timeout)
         court_pages.append(payload)
-        if not any(link["rel"] == "next" for link in payload["links"]):
+        if not api.has_next_page(payload):
             break
         page += 1
     divisions = read_divisions(court_pages)
@@ -95,17 +96,7 @@ def collect_rows(start, end, phrases, max_records, timeout, session):
     for phrase in phrases:
         page = 0
         while True:
-            params = {
-                "all": phrase,
-                "courtType": "COMMON",
-                "judgmentTypes": "SENTENCE",
-                "sortingField": "DATABASE_ID",
-                "sortingDirection": "ASC",
-                "pageSize": 100,
-                "pageNumber": page,
-                "judgmentStartDate": start.isoformat(),
-                "judgmentEndDate": end.isoformat(),
-            }
+            params = search_query(phrase, start, end, page)
             result = api.search_judgments_page(params, session=session, timeout=timeout)
             for item in result["items"]:
                 identifier = item["id"]
@@ -129,7 +120,7 @@ def collect_rows(start, end, phrases, max_records, timeout, session):
                 seen.add(identifier)
                 if max_records and len(seen) >= max_records:
                     return rows
-            if not any(link["rel"] == "next" for link in result["links"]):
+            if not api.has_next_page(result):
                 break
             page += 1
     return rows
