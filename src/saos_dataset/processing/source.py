@@ -60,6 +60,42 @@ def read_divisions(pages):
     return divisions
 
 
+def select_judgment(item, divisions, start, end):
+    """Select and validate one case without modifying source data or progress.
+
+    args:
+        item: Original judgment data from a validated raw page or detail response.
+        divisions: Validated division metadata indexed by stable division ID.
+        start: Beginning of the permitted judgment date range.
+        end: End of the permitted judgment date range.
+
+    returns:
+        Mapping with status selected, filtered or rejected, an explanatory reason
+        for unselected cases, and the legacy input record only when selected.
+    """
+    identifier = item["id"]
+    if item.get("courtType") != "COMMON" or item.get("judgmentType") != "SENTENCE":
+        return {"status": "filtered", "reason": "Unsupported court or judgment type", "record": None}
+    html = item.get("textContent")
+    text = extract_text(html) if isinstance(html, str) else ""
+    if not text:
+        return {"status": "rejected", "reason": "Missing judgment text", "record": None}
+    if not re.search(r"zadośćuczyn", text, re.I) or not MONEY.search(text):
+        return {"status": "filtered", "reason": "Missing compensation term or PLN amount", "record": None}
+    division = item.get("division")
+    division_id = division.get("id") if isinstance(division, dict) else None
+    if type(division_id) is not int or division_id <= 0:
+        return {"status": "rejected", "reason": "Invalid division ID", "record": None}
+    try:
+        data, text = validate_judgment({"data": {**item, "division": divisions.get(division_id, {})}}, identifier, start, end)
+    except ValueError as error:
+        return {"status": "rejected", "reason": str(error), "record": None}
+    record = {"id": identifier, "judgmentDate": data["judgmentDate"], "courtCases": data["courtCases"],
+              "division": data["division"], "text": text, "source_payload": item,
+              "source_url": f"{BASE_URL}/judgments/{identifier}"}
+    return {"status": "selected", "reason": None, "record": record}
+
+
 def records_from_raw(settings, checkpoint, run_id):
     """Yield selected local cases and advance only after durable extraction or rejection.
 
@@ -107,30 +143,14 @@ def records_from_raw(settings, checkpoint, run_id):
                 if record_complete(path, identifier, checkpoint["dataset_id"]):
                     remove_tree(path.parent / "pending")
                     continue
-                if item.get("courtType") != "COMMON" or item.get("judgmentType") != "SENTENCE":
+                selection = select_judgment(item, divisions, start, end)
+                if selection["status"] == "filtered":
                     summary["filtered"] += 1
                     continue
-                html = item.get("textContent")
-                text = extract_text(html) if isinstance(html, str) else ""
-                if not text:
-                    summary["rejected"].append({"id": identifier, "reason": "Missing judgment text"})
+                if selection["status"] == "rejected":
+                    summary["rejected"].append({"id": identifier, "reason": selection["reason"]})
                     continue
-                if not re.search(r"zadośćuczyn", text, re.I) or not MONEY.search(text):
-                    summary["filtered"] += 1
-                    continue
-                division = item.get("division")
-                division_id = division.get("id") if isinstance(division, dict) else None
-                if type(division_id) is not int or division_id <= 0:
-                    summary["rejected"].append({"id": identifier, "reason": "Invalid division ID"})
-                    continue
-                try:
-                    data, text = validate_judgment({"data": {**item, "division": divisions.get(division_id, {})}}, identifier, start, end)
-                except ValueError as error:
-                    summary["rejected"].append({"id": identifier, "reason": str(error)})
-                    continue
-                record = {"id": identifier, "judgmentDate": data["judgmentDate"], "courtCases": data["courtCases"],
-                          "division": data["division"], "text": text, "source_payload": item,
-                          "source_url": f"{BASE_URL}/judgments/{identifier}"}
+                record = selection["record"]
                 save_checkpoint(output, checkpoint)
                 summary["selected"] += 1
                 yield record
