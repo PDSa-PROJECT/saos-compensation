@@ -1,0 +1,160 @@
+"""Collect complete SAOS cases into the local judgment row layout."""
+
+import json
+from datetime import date
+from typing import Annotated
+
+from pydantic import ConfigDict, Field, validate_call
+from zenml import pipeline, step
+
+from saos_dataset.acquisition.settings import search_query
+from saos_dataset.clients import api
+from saos_dataset.processing.source import read_divisions, select_judgment
+from saos_dataset.settings import FiniteNumber, NonblankString
+
+from saos_workflows.artifacts import ParquetArtifact, ParquetMaterializer, write_artifact
+
+
+@validate_call(config=ConfigDict(strict=True, arbitrary_types_allowed=True))
+def collect_case_rows(
+    start_date: NonblankString,
+    end_date: NonblankString,
+    phrases: Annotated[list[NonblankString], Field(min_length=1)],
+    selected_phrases: Annotated[list[NonblankString], Field(min_length=1)] | None = None,
+    max_records: Annotated[int, Field(ge=0)] = 0,
+    timeout: Annotated[FiniteNumber, Field(gt=0)] = 30.0,
+    session: object | None = None,
+):
+    """Validate collection inputs and return source-backed judgment rows.
+
+    args:
+        start_date: Inclusive judgment date in ISO format.
+        end_date: Inclusive judgment date in ISO format.
+        phrases: Configured SAOS search phrases in retrieval order.
+        selected_phrases: Subset to search, or None to search all phrases.
+        max_records: Maximum unique details to fetch; zero means unlimited.
+        timeout: Positive per-request HTTP timeout in seconds.
+        session: Optional caller-owned session for offline verification.
+
+    returns:
+        Judgment rows ready for shared artifact publication.
+    """
+    start, end = date.fromisoformat(start_date), date.fromisoformat(end_date)
+    if start > end:
+        raise ValueError("start_date must not be after end_date")
+    if selected_phrases is None:
+        selected_phrases = phrases
+    if (
+        len(set(phrases)) != len(phrases)
+        or len(set(selected_phrases)) != len(selected_phrases)
+        or not set(selected_phrases) <= set(phrases)
+    ):
+        raise ValueError("selected_phrases must be a nonempty subset of phrases")
+    if session is None:
+        with api.open_session() as shared_session:
+            rows = collect_rows(start, end, selected_phrases, max_records, timeout, shared_session)
+    else:
+        rows = collect_rows(start, end, selected_phrases, max_records, timeout, session)
+    return rows
+
+
+def collect_rows(start, end, phrases, max_records, timeout, session):
+    """Fetch unique judgment details and retain selected and unselected cases.
+
+    args:
+        start: First included judgment date.
+        end: Last included judgment date.
+        phrases: Search phrases in retrieval order.
+        max_records: Maximum unique details, or zero for unlimited.
+        timeout: Per-request HTTP timeout.
+        session: Shared HTTP session.
+
+    returns:
+        Judgment rows retaining complete SAOS detail responses.
+    """
+    court_pages = []
+    page = 0
+    while True:
+        payload = api.search_courts(page, session=session, timeout=timeout)
+        court_pages.append(payload)
+        if not api.has_next_page(payload):
+            break
+        page += 1
+    divisions = read_divisions(court_pages)
+
+    rows = []
+    seen = set()
+    for phrase in phrases:
+        page = 0
+        while True:
+            params = search_query(phrase, start, end, page)
+            result = api.search_judgments_page(params, session=session, timeout=timeout)
+            for item in result["items"]:
+                identifier = item["id"]
+                if identifier in seen:
+                    continue
+                detail = api.fetch_judgment(identifier, session=session, timeout=timeout)
+                selection = select_judgment(detail["data"], divisions, start, end)
+                record = selection["record"]
+                rows.append({
+                    "saos_id": identifier,
+                    "source_json": json.dumps(detail, ensure_ascii=False),
+                    "selected_record_json": json.dumps(record, ensure_ascii=False) if record is not None else None,
+                    "judgment_text": record["text"] if record is not None else None,
+                    "selection_status": selection["status"],
+                    "selection_reason": selection["reason"],
+                    "target_json": None,
+                    "features_json": None,
+                    "target_total_pln": None,
+                    "eligible": None,
+                })
+                seen.add(identifier)
+                if max_records and len(seen) >= max_records:
+                    return rows
+            if not api.has_next_page(result):
+                break
+            page += 1
+    return rows
+
+
+@step(enable_cache=False, output_materializers=ParquetMaterializer)
+def collect_cases_step(start_date: str, end_date: str, phrases: list[str],
+                       selected_phrases: list[str] | None = None, max_records: int = 0,
+                       timeout: float = 30.0) -> ParquetArtifact:
+    """Collect cases and publish a managed plain Parquet artifact.
+
+    args:
+        start_date: Inclusive first judgment date.
+        end_date: Inclusive last judgment date.
+        phrases: Configured search phrases.
+        selected_phrases: Subset to search, or None for all phrases.
+        max_records: Unique detail cap, with zero meaning unlimited.
+        timeout: Per-request HTTP timeout in seconds.
+
+    returns:
+        Parquet reference published through the configured artifact store.
+    """
+    rows = collect_case_rows(start_date, end_date, phrases, selected_phrases, max_records, timeout)
+    return write_artifact(rows)
+
+
+@pipeline
+def collect_cases(start_date: str, end_date: str, phrases: list[str],
+                  selected_phrases: list[str] | None = None, max_records: int = 0,
+                  timeout: float = 30.0) -> ParquetArtifact:
+    """Track collection and publish its Parquet through the active stack.
+
+    args:
+        start_date: Inclusive first judgment date.
+        end_date: Inclusive last judgment date.
+        phrases: Configured search phrases.
+        selected_phrases: Subset to search, or None for all phrases.
+        max_records: Unique detail cap, with zero meaning unlimited.
+        timeout: Per-request HTTP timeout in seconds.
+
+    returns:
+        Published collection artifact output.
+    """
+    return collect_cases_step(start_date=start_date, end_date=end_date, phrases=phrases,
+                               selected_phrases=selected_phrases,
+                              max_records=max_records, timeout=timeout)

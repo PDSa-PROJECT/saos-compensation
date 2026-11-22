@@ -20,6 +20,7 @@ htmlcov/
 .ruff_cache/
 .tox/
 .nox/
+.zen/
 
 # Notebooks
 .ipynb_checkpoints/

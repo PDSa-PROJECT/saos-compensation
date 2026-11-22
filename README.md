@@ -60,6 +60,8 @@ The installed package is `saos_dataset`, discovered under `src/`. Acquisition, e
 
 See the [development guide](docs/development.md#package-boundaries) for module responsibilities and runtime dependencies.
 
+The three local ZenML judgment pipelines and their limitations are described in the [workflow guide](docs/workflows.md).
+
 ## Setup
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). From the repository root, sync the environment for your platform:
