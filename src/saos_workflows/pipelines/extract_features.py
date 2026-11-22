@@ -78,12 +78,11 @@ async def extract_with_worker(rows, config):
         for row in rows
     ):
         return await extract_feature_rows(rows, config, None)
-    root = Path(__file__).resolve().parents[3]
     localities = load_locality_context(
-        config["metadata_fields"], root / "tmp" / "gugik", config["processing"]["timeout"]
+        config["metadata_fields"], config["paths"]["localities_path"], config["processing"]["timeout"]
     )
     check_device(config["system_one"]["device"])
-    async with open_server(config["system_one"], root / "basal_weights") as server:
+    async with open_server(config["system_one"], Path(config["paths"]["model_cache_path"])) as server:
         return await extract_feature_rows(rows, config, server, localities=localities)
 
 
