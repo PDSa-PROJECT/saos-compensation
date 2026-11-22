@@ -27,7 +27,6 @@ dependencies = [
 [project.scripts]
 get-raw-data = "saos_dataset.cli.main:main"
 process-data = "saos_dataset.cli.process:main"
-saos-workflows = "saos_workflows.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
