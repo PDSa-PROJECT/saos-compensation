@@ -1,0 +1,7 @@
+# Each phrase is a separate SAOS full-text search; keep the original query wording.
+phrases:
+  - zadośćuczynienie
+# "any" selects the union; "all" requires every configured phrase for an ID.
+phrase_match: any
+# Count unique, fetched judgment responses, including locally rejected cases; 0 is unlimited.
+record_limit: 100
