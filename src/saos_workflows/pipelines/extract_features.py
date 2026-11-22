@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from zenml import pipeline, step
+from zenml.client import Client
 
 from saos_dataset.clients.basal import open_server
 from saos_dataset.extraction.basal_filtering import extract_predictors
@@ -14,7 +15,7 @@ from saos_dataset.processing.metadata import add_metadata_features
 from saos_dataset.processing.localities import load_locality_context
 from saos_dataset.processing.pipeline import check_device
 
-from saos_dataset.storage.parquet import read_rows, write_rows
+from saos_workflows.artifacts import ParquetArtifact, ParquetMaterializer, read_artifact, write_artifact
 
 
 async def extract_feature_rows(rows, config, server, *, localities=None, extractor=None):
@@ -86,37 +87,29 @@ async def extract_with_worker(rows, config):
         return await extract_feature_rows(rows, config, server, localities=localities)
 
 
-@step(enable_cache=False)
-def extract_features_step(input_path: str, output_path: str, config_dir: str | None = None) -> str:
-    """Write predictors and admission decisions to a new local Parquet file.
+@step(enable_cache=False, output_materializers=ParquetMaterializer)
+def extract_features_step(cases: ParquetArtifact, config_dir: str | None = None) -> ParquetArtifact:
+    """Publish predictors and admission decisions as managed Parquet.
 
     args:
-        input_path: Existing target-enriched Parquet path.
-        output_path: New local Parquet path, distinct from input.
+        cases: Explicitly selected target-enriched artifact.
         config_dir: Optional existing processing YAML directory.
     returns:
-        Path of the completed feature-enriched file.
+        Parquet reference published through the configured artifact store.
     """
-    source, destination = Path(input_path).resolve(), Path(output_path).resolve()
-    if source == destination:
-        raise ValueError("Feature output must differ from its input")
-    if destination.exists():
-        raise FileExistsError(destination)
     config = load_config(config_dir)
-    result = asyncio.run(extract_with_worker(read_rows(source), config))
-    write_rows(destination, result)
-    return str(destination)
+    result = asyncio.run(extract_with_worker(read_artifact(cases), config))
+    return write_artifact(result)
 
 
 @pipeline
-def extract_features(input_path: str, output_path: str, config_dir: str | None = None) -> str:
+def extract_features(artifact_id: str, config_dir: str | None = None) -> ParquetArtifact:
     """Track source-grounded feature extraction and admission.
 
     args:
-        input_path: Explicit target artifact path.
-        output_path: Explicit new output path.
+        artifact_id: Exact target artifact-version UUID, never implicit latest.
         config_dir: Optional existing processing YAML directory.
     returns:
-        Path of the published feature-enriched artifact.
+        Published feature-enriched artifact output.
     """
-    return extract_features_step(input_path=input_path, output_path=output_path, config_dir=config_dir)
+    return extract_features_step(cases=Client().get_artifact_version(artifact_id), config_dir=config_dir)

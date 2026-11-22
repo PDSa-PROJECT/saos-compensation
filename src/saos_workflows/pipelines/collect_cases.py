@@ -14,6 +14,8 @@ from saos_dataset.processing.source import read_divisions, select_judgment
 from saos_dataset.settings import FiniteNumber, NonblankString
 
 from saos_dataset.storage.parquet import write_rows
+from saos_workflows.artifacts import ParquetArtifact, ParquetMaterializer
+from zenml import get_step_context
 
 
 @validate_call(config=ConfigDict(strict=True, arbitrary_types_allowed=True))
@@ -127,46 +129,47 @@ def collect_rows(start, end, phrases, max_records, timeout, session):
     return rows
 
 
-@step(enable_cache=False)
-def collect_cases_step(start_date: str, end_date: str, phrases: list[str], output_path: str,
+@step(enable_cache=False, output_materializers=ParquetMaterializer)
+def collect_cases_step(start_date: str, end_date: str, phrases: list[str],
                        selected_phrases: list[str] | None = None, max_records: int = 0,
-                       timeout: float = 30.0) -> str:
-    """Collect cases and return the explicit local Parquet path.
+                       timeout: float = 30.0) -> ParquetArtifact:
+    """Collect cases and publish a managed plain Parquet artifact.
 
     args:
         start_date: Inclusive first judgment date.
         end_date: Inclusive last judgment date.
         phrases: Configured search phrases.
-        output_path: New local Parquet file destination.
         selected_phrases: Subset to search, or None for all phrases.
         max_records: Unique detail cap, with zero meaning unlimited.
         timeout: Per-request HTTP timeout in seconds.
 
     returns:
-        Path string for the local Parquet file (not a ZenML file artifact).
+        Parquet reference published through the configured artifact store.
     """
-    return collect_to_parquet(start_date, end_date, phrases, output_path,
-                              selected_phrases, max_records, timeout)
+    materializer = get_step_context().get_output_materializer()
+    with materializer.get_temporary_directory(delete_at_exit=False) as directory:
+        path = collect_to_parquet(start_date, end_date, phrases, directory + "/data.parquet",
+                                  selected_phrases, max_records, timeout)
+        return ParquetArtifact(path)
 
 
 @pipeline
-def collect_cases(start_date: str, end_date: str, phrases: list[str], output_path: str,
+def collect_cases(start_date: str, end_date: str, phrases: list[str],
                   selected_phrases: list[str] | None = None, max_records: int = 0,
-                  timeout: float = 30.0) -> str:
-    """Track a local collection run and its explicit Parquet output path.
+                  timeout: float = 30.0) -> ParquetArtifact:
+    """Track collection and publish its Parquet through the active stack.
 
     args:
         start_date: Inclusive first judgment date.
         end_date: Inclusive last judgment date.
         phrases: Configured search phrases.
-        output_path: New local Parquet file destination.
         selected_phrases: Subset to search, or None for all phrases.
         max_records: Unique detail cap, with zero meaning unlimited.
         timeout: Per-request HTTP timeout in seconds.
 
     returns:
-        Path string emitted by the collection step.
+        Published collection artifact output.
     """
     return collect_cases_step(start_date=start_date, end_date=end_date, phrases=phrases,
-                              output_path=output_path, selected_phrases=selected_phrases,
+                               selected_phrases=selected_phrases,
                               max_records=max_records, timeout=timeout)

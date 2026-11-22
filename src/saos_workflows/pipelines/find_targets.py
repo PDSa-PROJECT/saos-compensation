@@ -3,15 +3,15 @@
 import asyncio
 import json
 from decimal import Decimal
-from pathlib import Path
 
 from zenml import pipeline, step
+from zenml.client import Client
 
 from saos_dataset.extraction.model.configuration import load_config
 from saos_dataset.extraction.quality import target_rejection_reason
 from saos_dataset.extraction.targets.amounts import extract_award
 
-from saos_dataset.storage.parquet import read_rows, write_rows
+from saos_workflows.artifacts import ParquetArtifact, ParquetMaterializer, read_artifact, write_artifact
 
 
 async def find_target_rows(rows, config, *, extractor=None):
@@ -42,37 +42,29 @@ async def find_target_rows(rows, config, *, extractor=None):
     return output
 
 
-@step(enable_cache=False)
-def find_targets_step(input_path: str, output_path: str, config_dir: str | None = None) -> str:
-    """Enrich an explicit local Parquet file with monetary target results.
+@step(enable_cache=False, output_materializers=ParquetMaterializer)
+def find_targets_step(cases: ParquetArtifact, config_dir: str | None = None) -> ParquetArtifact:
+    """Enrich an explicitly selected managed Parquet artifact with targets.
 
     args:
-        input_path: Explicit existing local Parquet input.
-        output_path: Explicit new local Parquet output.
+        cases: Explicitly selected collection artifact.
         config_dir: Optional existing processing YAML directory.
     returns:
-        Path of the completed output file.
+        Parquet reference published through the configured artifact store.
     """
-    source, destination = Path(input_path).resolve(), Path(output_path).resolve()
-    if source == destination:
-        raise ValueError("Target output must differ from its input")
-    if destination.exists():
-        raise FileExistsError(destination)
     config = load_config(config_dir)
-    rows = asyncio.run(find_target_rows(read_rows(source), config))
-    write_rows(destination, rows)
-    return str(destination)
+    rows = asyncio.run(find_target_rows(read_artifact(cases), config))
+    return write_artifact(rows)
 
 
 @pipeline
-def find_targets(input_path: str, output_path: str, config_dir: str | None = None) -> str:
-    """Run target extraction independently on one selected local artifact.
+def find_targets(artifact_id: str, config_dir: str | None = None) -> ParquetArtifact:
+    """Run target extraction independently on one selected artifact version.
 
     args:
-        input_path: Explicit source Parquet path.
-        output_path: Explicit new Parquet path.
+        artifact_id: Exact collection artifact-version UUID, never implicit latest.
         config_dir: Optional existing processing YAML directory.
     returns:
-        Path of the published target-enriched artifact.
+        Published target-enriched artifact output.
     """
-    return find_targets_step(input_path=input_path, output_path=output_path, config_dir=config_dir)
+    return find_targets_step(cases=Client().get_artifact_version(artifact_id), config_dir=config_dir)
