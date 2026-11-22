@@ -1,0 +1,175 @@
+"""Collect SAOS judgment details into one local Parquet dataset."""
+
+import json
+from datetime import date
+from pathlib import Path
+
+from zenml import pipeline, step
+
+from saos_dataset.clients import api
+from saos_dataset.processing.source import read_divisions, select_judgment
+
+from ._rows import write_rows
+
+
+def collect_to_parquet(start_date, end_date, phrases, output_path,
+                       selected_phrases=None, max_records=0, timeout=30.0, session=None):
+    """Fetch unique details and publish selected and unselected cases together.
+
+    args:
+        start_date: Inclusive judgment date in ISO format.
+        end_date: Inclusive judgment date in ISO format.
+        phrases: Configured SAOS search phrases in retrieval order.
+        output_path: New local Parquet file destination.
+        selected_phrases: Subset to search, or None to search all configured phrases.
+        max_records: Maximum unique details to fetch; zero means unlimited.
+        timeout: Positive per-request HTTP timeout in seconds.
+        session: Optional caller-owned session for offline verification.
+
+    returns:
+        Path string for the complete local Parquet file.
+    """
+    start, end = date.fromisoformat(start_date), date.fromisoformat(end_date)
+    if start > end:
+        raise ValueError("start_date must not be after end_date")
+    if not isinstance(phrases, list) or not phrases or any(
+        not isinstance(phrase, str) or not phrase.strip() for phrase in phrases
+    ) or len(set(phrases)) != len(phrases):
+        raise ValueError("phrases must be a nonempty list of distinct nonblank strings")
+    if selected_phrases is None:
+        selected_phrases = phrases
+    if not isinstance(selected_phrases, list) or not selected_phrases or any(
+        phrase not in phrases for phrase in selected_phrases
+    ) or len(set(selected_phrases)) != len(selected_phrases):
+        raise ValueError("selected_phrases must be a nonempty subset of phrases")
+    if type(max_records) is not int or max_records < 0:
+        raise ValueError("max_records must be a nonnegative integer")
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout < float("inf"):
+        raise ValueError("timeout must be a positive finite number")
+    if not isinstance(output_path, (str, Path)) or not str(output_path).strip():
+        raise ValueError("output_path must be a nonblank local path")
+    path = Path(output_path)
+    if path.exists():
+        raise FileExistsError(f"Parquet file already exists: {path}")
+
+    if session is None:
+        with api.open_session() as shared_session:
+            return _collect(start, end, selected_phrases, max_records, timeout, path, shared_session)
+    return _collect(start, end, selected_phrases, max_records, timeout, path, session)
+
+
+def _collect(start, end, phrases, max_records, timeout, path, session):
+    """Retrieve court metadata and search pages before writing a complete table.
+
+    args:
+        start: First included judgment date.
+        end: Last included judgment date.
+        phrases: Search phrases in retrieval order.
+        max_records: Maximum unique details, or zero for unlimited.
+        timeout: Per-request HTTP timeout.
+        path: New local Parquet destination.
+        session: Shared HTTP session.
+
+    returns:
+        String path of the published Parquet file.
+    """
+    court_pages = []
+    page = 0
+    while True:
+        payload = api.search_courts(page, session=session, timeout=timeout)
+        court_pages.append(payload)
+        if not any(link["rel"] == "next" for link in payload["links"]):
+            break
+        page += 1
+    divisions = read_divisions(court_pages)
+
+    rows = []
+    seen = set()
+    for phrase in phrases:
+        page = 0
+        while True:
+            params = {
+                "all": phrase,
+                "courtType": "COMMON",
+                "judgmentTypes": "SENTENCE",
+                "sortingField": "DATABASE_ID",
+                "sortingDirection": "ASC",
+                "pageSize": 100,
+                "pageNumber": page,
+                "judgmentStartDate": start.isoformat(),
+                "judgmentEndDate": end.isoformat(),
+            }
+            result = api.search_judgments_page(params, session=session, timeout=timeout)
+            for item in result["items"]:
+                identifier = item["id"]
+                if identifier in seen:
+                    continue
+                detail = api.fetch_judgment(identifier, session=session, timeout=timeout)
+                selection = select_judgment(detail["data"], divisions, start, end)
+                record = selection["record"]
+                rows.append({
+                    "saos_id": identifier,
+                    "source_json": json.dumps(detail, ensure_ascii=False),
+                    "selected_record_json": json.dumps(record, ensure_ascii=False) if record is not None else None,
+                    "judgment_text": record["text"] if record is not None else None,
+                    "selection_status": selection["status"],
+                    "selection_reason": selection["reason"],
+                    "target_json": None,
+                    "features_json": None,
+                    "target_total_pln": None,
+                    "eligible": None,
+                })
+                seen.add(identifier)
+                if max_records and len(seen) >= max_records:
+                    write_rows(path, rows)
+                    return str(path)
+            if not any(link["rel"] == "next" for link in result["links"]):
+                break
+            page += 1
+    write_rows(path, rows)
+    return str(path)
+
+
+@step(enable_cache=False)
+def collect_cases_step(start_date: str, end_date: str, phrases: list[str], output_path: str,
+                       selected_phrases: list[str] | None = None, max_records: int = 0,
+                       timeout: float = 30.0) -> str:
+    """Run a validated SAOS collection with one shared HTTP session.
+
+    args:
+        start_date: Inclusive first judgment date.
+        end_date: Inclusive last judgment date.
+        phrases: Configured search phrases.
+        output_path: New local Parquet file destination.
+        selected_phrases: Subset to search, or None for all phrases.
+        max_records: Unique detail cap, with zero meaning unlimited.
+        timeout: Per-request HTTP timeout in seconds.
+
+    returns:
+        Path string for the local Parquet file (not a ZenML file artifact).
+    """
+    return collect_to_parquet(start_date, end_date, phrases, output_path,
+                              selected_phrases, max_records, timeout)
+
+
+@pipeline
+def collect_cases(start_date: str, end_date: str, phrases: list[str], output_path: str,
+                  selected_phrases: list[str] | None = None, max_records: int = 0,
+                  timeout: float = 30.0) -> str:
+    """Track a local collection run and its explicit Parquet output path.
+
+    args:
+        start_date: Inclusive first judgment date.
+        end_date: Inclusive last judgment date.
+        phrases: Configured search phrases.
+        output_path: New local Parquet file destination.
+        selected_phrases: Subset to search, or None for all phrases.
+        max_records: Unique detail cap, with zero meaning unlimited.
+        timeout: Per-request HTTP timeout in seconds.
+
+    returns:
+        Path string emitted by the collection step.
+    """
+    return collect_cases_step(start_date=start_date, end_date=end_date, phrases=phrases,
+                              output_path=output_path, selected_phrases=selected_phrases,
+                              max_records=max_records, timeout=timeout)
