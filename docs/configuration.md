@@ -18,7 +18,7 @@ The stages have separate configuration directories:
 
 Acquisition defaults: `search_query: zadośćuczynienie`, `max_age_years: 10`, `max_pages: 0` (unlimited), `max_gib: 0.5`, `download_path: tmp/raw`, `debug: true`, `timeout: 20`. Page limits count judgment pages across resumptions, excluding court metadata. Raw debug controls only per-page console progress. Full raw responses, the download checkpoint and the final console summary are produced with either debug value.
 
-Processing defaults: `input_path: tmp/raw`, `output_path: tmp/processed`, `max_gib: 0.5`, `debug: true`, `timeout: 20`. Its size budget applies only to processed output. Debug adds `source.txt` and `model_calls.json` to retained case folders and can retain missing or unconfirmed targets as `valid: false` when accepted source-backed damage evidence exists. Source and leakage validation remain active. With debug disabled, newly saved cases contain only `record.json` and `award.json` and require `valid: true`; existing artifacts are preserved. Processing checkpoints and temporary pending model decisions are saved in either mode. Training must select `valid: true` records. The timeout applies to locality metadata downloads, not SAOS. Dataset paths (`download_path`, `input_path` and `output_path`) accept absolute filesystem locations or paths relative to the repository root, including parent-directory segments (`..`). Processing input and output must not overlap after path resolution, including through symlinks.
+Processing defaults: `input_path: tmp/raw`, `output_path: tmp/processed`, `max_gib: 0.5`, `debug: true`, `timeout: 20`. Its size budget applies only to processed output. Debug adds `source.txt` and `model_calls.json` to retained case folders and can retain missing or unconfirmed targets as `valid: false` when accepted source-backed damage evidence exists. Source and leakage validation remain active. With debug disabled, newly saved cases contain only `record.json` and `award.json` and require `valid: true`; existing artifacts are preserved. Processing checkpoints and temporary pending model decisions are saved in either mode. Training must select `valid: true` records. The timeout applies to locality metadata downloads, not SAOS. Dataset paths (`download_path`, `input_path` and `output_path`) accept absolute filesystem locations or paths relative to the working directory, including parent-directory segments (`..`). Processing input and output must not overlap after path resolution, including through symlinks.
 
 Explicit CLI arguments override only their corresponding stage defaults:
 
@@ -28,6 +28,8 @@ uv run --no-sync process-data --input-path tmp/raw-five-years --output-path tmp/
 ```
 
 `--config-dir` selects another directory for the invoked stage only: raw downloading needs only `api.yaml`; processing needs `process.yaml`, `features.yaml`, `targets.yaml` and `basal.yaml`. Processing has no date or page-limit flags: the saved raw snapshot defines its input. Model and feature settings are changed in YAML.
+
+All relative paths use the process working directory, including default configuration directories, `.env`, datasets, caches and preprocessing artifacts. Nothing discovers the checkout from installed source files. When launching elsewhere, pass `--config-dir` and dataset paths explicitly or supply the corresponding runtime settings. Existing datasets remain resumable when the supplied paths identify the same files.
 
 ### Amount context
 
@@ -50,10 +52,10 @@ The current models are:
 - **Remek/basal-2.0-4.5B:** extracts predictors and reviews factuality, relevance and leakage. `basal.yaml` can alternatively select the supported `Remek/basal-2.0-mini` checkpoint. Revisions are pinned in code.
 - **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2:** embeds target patterns and eligible monetary contexts of configured word lengths to select a judgment amount sentence.
 
-Missing model files download automatically from Hugging Face and are reused from `basal_weights/` and `embedding_weights/`. Keep these caches outside a size-limited output directory. Locality population enrichment also downloads and caches a GUGiK snapshot under `tmp/gugik/`.
+Missing model files download automatically from Hugging Face. Runtime settings `MODEL_CACHE_PATH`, `ENCODER_CACHE_PATH` and `LOCALITIES_PATH` select the Basal, embedding and GUGiK cache locations, defaulting to `basal_weights`, `embedding_weights` and `tmp/gugik`. They are exposed as `config["paths"]` for processing callers. Keep model caches outside a size-limited output directory. Cache locations do not change the extraction signature; locality snapshot contents are still verified against the checkpoint. Reusable `create_embeddings` callers may pass `cache_dir` directly.
 
 The default configuration selects `mps` in **both** `configs/dataset/processing/basal.yaml` and `configs/dataset/processing/targets.yaml`. Set both devices to `cpu` or `cuda` for another runtime. Unavailable accelerators fail before inference starts; raw downloading does not check devices.
 
 ## Settings validation
 
-Precedence: explicit CLI → process environment → repository-root `.env` → YAML → runtime defaults. See [`.env.example`](../.env.example). Acquisition and processing have independent runtime keys. Model/device overrides apply only to processing. A changed `EMBEDDING_MODEL` requires `EMBEDDING_REVISION`. Domain schemas retain strict explicit-input validation.
+Precedence: explicit CLI → process environment → working-directory `.env` → YAML → runtime defaults. See [`.env.example`](../.env.example). Acquisition and processing have independent runtime keys. Model/device overrides apply only to processing. A changed `EMBEDDING_MODEL` requires `EMBEDDING_REVISION`. Domain schemas retain strict explicit-input validation.

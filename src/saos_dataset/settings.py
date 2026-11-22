@@ -1,11 +1,12 @@
 """Strict domain validation and layered runtime settings."""
 
 import math
-from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import AfterValidator, BeforeValidator, Field
+from pydantic import AfterValidator, BeforeValidator, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from saos_dataset.configuration import validate_path
 
 
 def finite_number(value):
@@ -105,10 +106,10 @@ class Settings(BaseSettings):
 
 
 class RuntimeSettings(BaseSettings):
-    """Machine settings and optional model overrides from the root .env/environment."""
+    """Machine settings and model overrides from the selected dotenv/environment."""
 
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file=".env",
         env_file_encoding="utf-8", extra="ignore", cli_parse_args=False,
     )
 
@@ -127,6 +128,24 @@ class RuntimeSettings(BaseSettings):
     embedding_revision: NonblankString | None = None
     basal_device: Device = "mps"
     basal_model: NonblankString | None = None
+    model_cache_path: NonblankString = "basal_weights"
+    encoder_cache_path: NonblankString = "embedding_weights"
+    localities_path: NonblankString = "tmp/gugik"
+
+    @field_validator("model_cache_path", "encoder_cache_path", "localities_path")
+    @classmethod
+    def storage_path(cls, value):
+        """Validate runtime storage locations before opening files or models.
+
+        args:
+            cls: Runtime settings class.
+            value: Configured filesystem location.
+
+        returns:
+            The unchanged path with normal working-directory semantics.
+        """
+        validate_path(value, "storage path")
+        return value
 
     @classmethod
     def settings_customise_sources(

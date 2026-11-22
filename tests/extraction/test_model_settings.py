@@ -54,7 +54,7 @@ def test_basal_validates_historical_requests_and_responses(
         None.
     """
     config = config_module.load_config()
-    monkeypatch.setattr(decisions, "ROOT", tmp_path)
+    config["processing"]["output_path"] = str(tmp_path / config["processing"]["output_path"])
     calls = translate_fields(json.loads(model_calls_path.read_text()))
     responses = {
         json.dumps(call["request"], sort_keys=True, ensure_ascii=False): call[
@@ -129,7 +129,7 @@ def test_model_request_cache_is_debug_only(monkeypatch, tmp_path, debug):
         None.
     """
     config = config_module.load_config(overrides={"debug": debug})
-    monkeypatch.setattr(decisions, "ROOT", tmp_path)
+    config["processing"]["output_path"] = str(tmp_path / config["processing"]["output_path"])
     calls = []
 
     class Server:

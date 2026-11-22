@@ -99,7 +99,7 @@ For a small first download, add `--max-pages 1` (at most 100 judgments, plus cou
 
 The equivalent module entry points are `python -m saos_dataset.cli` and `python -m saos_dataset.cli.process`. The former `get-data` command is replaced by these two commands.
 
-Dataset paths accept absolute locations, such as `process-data --input-path /tmp/raw/ --output-path /tmp/processed/`, and relative paths, including `..`. Relative paths are resolved from the project root. Processing input and output directories must not overlap, including through symlinks.
+Dataset paths accept absolute locations, such as `process-data --input-path /tmp/raw/ --output-path /tmp/processed/`, and relative paths, including `..`. Relative paths use the working directory. When launching outside the checkout, supply `--config-dir` and dataset paths explicitly. Processing input and output directories must not overlap, including through symlinks.
 
 ### Download arguments
 
@@ -131,7 +131,7 @@ For `process-data`, debug adds `source.txt` and `model_calls.json` to retained c
 
 Processing checkpoints and temporary `pending/` state preserve progress and completed model decisions in both modes. Pending state is removed after acceptance or rejection. See [output and resume details](docs/acquisition.md).
 
-Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, root `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
+Both commands support `-h`/`--help`. Explicit arguments override their corresponding environment, working-directory `.env` and YAML values; `--no-debug` overrides a true YAML default. Model, feature and extraction settings stay in processing YAML. Cache locations are runtime settings listed in `.env.example`. Use separate output directories for changed processing experiments; the same raw JSON can serve each experiment.
 
 ## Documentation
 

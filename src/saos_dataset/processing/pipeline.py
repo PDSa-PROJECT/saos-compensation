@@ -15,9 +15,6 @@ from .source import records_from_raw
 from .metadata import add_metadata_features
 from .localities import load_locality_context
 
-ROOT = Path(__file__).resolve().parents[3]
-
-
 def check_device(device):
     """
     Require the requested PyTorch backend to be available before inference.
@@ -61,8 +58,8 @@ async def run(config, *, extractor=None, record_source=None):
     returns:
         None.
     """
-    directory = ROOT / config["processing"]["output_path"]
-    source = (ROOT / config["processing"]["input_path"]).resolve()
+    directory = Path(config["processing"]["output_path"])
+    source = Path(config["processing"]["input_path"]).resolve()
     destination = directory.resolve()
     if source == destination or source in destination.parents or destination in source.parents:
         raise ValueError("Processing input and output directories must not overlap")
@@ -89,13 +86,13 @@ async def process(config, *, extractor=None, record_source=None):
     """
     from saos_dataset.extraction.model import decisions
 
-    directory = ROOT / config["processing"]["output_path"]
+    directory = Path(config["processing"]["output_path"])
     checkpoint = load_checkpoint(config)
     if checkpoint["complete"]:
         print("No pending judgments in this processing snapshot.", flush=True)
         return
-    model_cache = ROOT / "basal_weights"
-    for cache in (model_cache, ROOT / "embedding_weights"):
+    model_cache = Path(config["paths"]["model_cache_path"])
+    for cache in (model_cache, Path(config["paths"]["encoder_cache_path"])):
         if config["processing"]["max_gib"] and cache.resolve().is_relative_to(
             directory.resolve()
         ):
@@ -107,7 +104,7 @@ async def process(config, *, extractor=None, record_source=None):
     check_device(config["embedding"]["device"])
     save_checkpoint(directory, checkpoint)
     localities = load_locality_context(
-        config["metadata_fields"], ROOT / "tmp" / "gugik", config["processing"]["timeout"]
+        config["metadata_fields"], config["paths"]["localities_path"], config["processing"]["timeout"]
     )
     if localities is not None:
         digest = localities[2]["sha256"]

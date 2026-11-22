@@ -289,16 +289,14 @@ def test_feature_list_validation(fields):
         FeaturePreprocessor().fit([], {"feature_fields": fields})
 
 
-def test_default_checkpoint_path_is_independent_of_working_directory(
-    project_root,
+def test_checkpoint_paths_use_launch_directory_or_explicit_path(
     settings,
     tmp_path,
     monkeypatch,
 ):
-    """Save and restore default preprocessing state outside the current directory.
+    """Resolve default paths at call time and honor an explicit artifact destination.
 
     args:
-        project_root: Repository configuration and fixture root.
         settings: Original model feature selection.
         tmp_path: Isolated filesystem root.
         monkeypatch: Scoped checkpoint-path and working-directory replacement.
@@ -308,19 +306,20 @@ def test_default_checkpoint_path_is_independent_of_working_directory(
     """
     from saos_dataset.storage import preprocessing as artifacts
 
-    assert artifacts.DEFAULT_PATH == project_root / "checkpoints/preprocessing/feature_preprocessor.pkl"
+    assert str(artifacts.DEFAULT_PATH) == "checkpoints/preprocessing/feature_preprocessor.pkl"
     destination = tmp_path / "checkpoints/preprocessing/feature_preprocessor.pkl"
-    monkeypatch.setattr(artifacts, "DEFAULT_PATH", destination)
     working = tmp_path / "other"
     working.mkdir()
     monkeypatch.chdir(working)
     records = [{"prior_payment": 0, "instance": "pierwsza"}]
     model = FeaturePreprocessor().fit(records, settings)
-    model.save()
+    model.save(destination)
     assert destination.is_file()
     assert not (working / "checkpoints").exists()
-    restored = FeaturePreprocessor.load(settings=settings)
+    restored = FeaturePreprocessor.load(destination, settings=settings)
     np.testing.assert_array_equal(restored.transform(records, ["1"])["X"], model.transform(records, ["1"])["X"])
+    model.save()
+    assert (working / artifacts.DEFAULT_PATH).is_file()
 
 
 def test_target_scaling_is_saved_separately_and_never_refits(
@@ -342,7 +341,7 @@ def test_target_scaling_is_saved_separately_and_never_refits(
     """
     from saos_dataset.storage import preprocessing as artifacts
 
-    assert artifacts.DEFAULT_TARGET_PATH == project_root / "checkpoints/preprocessing/target_preprocessor.pkl"
+    assert str(artifacts.DEFAULT_TARGET_PATH) == "checkpoints/preprocessing/target_preprocessor.pkl"
     predictor_path = tmp_path / "feature_preprocessor.pkl"
     target_path = tmp_path / "target_preprocessor.pkl"
     monkeypatch.setattr(artifacts, "DEFAULT_PATH", predictor_path)

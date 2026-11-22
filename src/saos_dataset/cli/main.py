@@ -49,7 +49,7 @@ def parse_arguments(arguments=None):
     parser.add_argument(
         "--download-path",
         default=argparse.SUPPRESS,
-        help="Raw output directory; absolute or relative to the project root",
+        help="Raw output directory; absolute or relative to the working directory",
     )
     parser.add_argument(
         "--timeout",

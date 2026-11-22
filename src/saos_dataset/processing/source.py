@@ -13,9 +13,6 @@ from saos_dataset.storage.raw import page_path, read_dataset, read_page
 from saos_dataset.storage.records import record_complete
 from .validation import validate_judgment
 
-ROOT = Path(__file__).resolve().parents[3]
-
-
 def read_divisions(pages):
     """Join court and division metadata from saved court API responses.
 
@@ -107,8 +104,8 @@ def records_from_raw(settings, checkpoint, run_id):
     returns:
         Iterator of validated, enriched judgments ready for model extraction.
     """
-    directory = ROOT / settings["input_path"]
-    output = ROOT / settings["output_path"]
+    directory = Path(settings["input_path"])
+    output = Path(settings["output_path"])
     raw, signature = read_dataset(directory)
     if signature != checkpoint["source_signature"]:
         raise ValueError("Raw input snapshot changed before processing")

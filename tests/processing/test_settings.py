@@ -32,16 +32,14 @@ def test_processing_rejects_resolved_path_overlap(monkeypatch, tmp_path, alias):
     """Reject overlapping locations even when their configured strings differ.
 
     args:
-        monkeypatch: Scoped project root override.
+        monkeypatch: Scoped launch-directory override.
         tmp_path: Isolated project root.
         alias: Alternate spelling of the input directory.
 
     returns:
         None.
     """
-    from saos_dataset.processing import settings
-
-    monkeypatch.setattr(settings, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
     raw = tmp_path / "raw"
     raw.mkdir()
     if alias == "absolute":

@@ -9,7 +9,7 @@ import sklearn
 from .files import write_bytes
 
 VERSION = 4
-DEFAULT_PATH = Path(__file__).resolve().parents[3] / "checkpoints" / "preprocessing" / "feature_preprocessor.pkl"
+DEFAULT_PATH = Path("checkpoints/preprocessing/feature_preprocessor.pkl")
 
 DEFAULT_TARGET_PATH = DEFAULT_PATH.with_name("target_preprocessor.pkl")
 
