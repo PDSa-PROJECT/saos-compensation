@@ -3,17 +3,29 @@
 import json
 from datetime import date
 from pathlib import Path
+from typing import Annotated
 
+from pydantic import ConfigDict, Field, validate_call
 from zenml import pipeline, step
 
 from saos_dataset.clients import api
 from saos_dataset.processing.source import read_divisions, select_judgment
+from saos_dataset.settings import FiniteNumber, NonblankString
 
 from ._rows import write_rows
 
 
-def collect_to_parquet(start_date, end_date, phrases, output_path,
-                       selected_phrases=None, max_records=0, timeout=30.0, session=None):
+@validate_call(config=ConfigDict(strict=True, arbitrary_types_allowed=True))
+def collect_to_parquet(
+    start_date: NonblankString,
+    end_date: NonblankString,
+    phrases: Annotated[list[NonblankString], Field(min_length=1)],
+    output_path: NonblankString | Path,
+    selected_phrases: Annotated[list[NonblankString], Field(min_length=1)] | None = None,
+    max_records: Annotated[int, Field(ge=0)] = 0,
+    timeout: Annotated[FiniteNumber, Field(gt=0)] = 30.0,
+    session: object | None = None,
+):
     """Fetch unique details and publish selected and unselected cases together.
 
     args:
@@ -32,21 +44,15 @@ def collect_to_parquet(start_date, end_date, phrases, output_path,
     start, end = date.fromisoformat(start_date), date.fromisoformat(end_date)
     if start > end:
         raise ValueError("start_date must not be after end_date")
-    if not isinstance(phrases, list) or not phrases or any(
-        not isinstance(phrase, str) or not phrase.strip() for phrase in phrases
-    ) or len(set(phrases)) != len(phrases):
-        raise ValueError("phrases must be a nonempty list of distinct nonblank strings")
     if selected_phrases is None:
         selected_phrases = phrases
-    if not isinstance(selected_phrases, list) or not selected_phrases or any(
-        phrase not in phrases for phrase in selected_phrases
-    ) or len(set(selected_phrases)) != len(selected_phrases):
+    if (
+        len(set(phrases)) != len(phrases)
+        or len(set(selected_phrases)) != len(selected_phrases)
+        or not set(selected_phrases) <= set(phrases)
+    ):
         raise ValueError("selected_phrases must be a nonempty subset of phrases")
-    if type(max_records) is not int or max_records < 0:
-        raise ValueError("max_records must be a nonnegative integer")
-    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout < float("inf"):
-        raise ValueError("timeout must be a positive finite number")
-    if not isinstance(output_path, (str, Path)) or not str(output_path).strip():
+    if not str(output_path).strip():
         raise ValueError("output_path must be a nonblank local path")
     path = Path(output_path)
     if path.exists():
