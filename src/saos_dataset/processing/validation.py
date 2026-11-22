@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from ..extraction.source.text import extract_text
+from saos_dataset.extraction.source.text import extract_text
 
 
 def validate_judgment(payload, identifier, start, end):

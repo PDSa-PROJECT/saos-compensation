@@ -6,8 +6,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..clients.api import LOCALITIES_URL, fetch_localities
-from ..clients.sql import read_localities
+from saos_dataset.clients.api import LOCALITIES_URL, fetch_localities
+from saos_dataset.clients.sql import read_localities
 from .files import write_bytes, write_json
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-from ..storage.files import write_bytes, write_json
+from saos_dataset.storage.files import write_bytes, write_json
 
 BASE_URL = "https://www.saos.org.pl/api"
 LOCALITIES_URL = "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/GPKG/OT_ADMS_P.gpkg"

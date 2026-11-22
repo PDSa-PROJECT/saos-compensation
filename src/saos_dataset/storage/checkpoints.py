@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
-from ..acquisition.settings import search_settings
+from saos_dataset.acquisition.settings import search_settings
 from .files import write_json
 from .raw import read_dataset
 

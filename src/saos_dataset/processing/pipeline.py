@@ -6,11 +6,11 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..clients.basal import open_extractor
-from ..extraction.quality import admission_decision
-from ..storage.checkpoints import load_checkpoint, save_checkpoint
-from ..storage.files import StorageLimitError, output_limit
-from ..storage.records import remove_pending, save_pending, write_result
+from saos_dataset.clients.basal import open_extractor
+from saos_dataset.extraction.quality import admission_decision
+from saos_dataset.storage.checkpoints import load_checkpoint, save_checkpoint
+from saos_dataset.storage.files import StorageLimitError, output_limit
+from saos_dataset.storage.records import remove_pending, save_pending, write_result
 from .source import records_from_raw
 from .metadata import add_metadata_features
 from .localities import load_locality_context
@@ -87,7 +87,7 @@ async def process(config, *, extractor=None, record_source=None):
     returns:
         None.
     """
-    from ..extraction.model import decisions
+    from saos_dataset.extraction.model import decisions
 
     directory = ROOT / config["processing"]["output_path"]
     checkpoint = load_checkpoint(config)

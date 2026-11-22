@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import field_validator
 
-from ...settings import Device, NonblankString, Probability, Settings
+from saos_dataset.settings import Device, NonblankString, Probability, Settings
 from .prompts import METADATA_FIELDS
 
 MODEL_REVISIONS = {

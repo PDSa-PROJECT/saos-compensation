@@ -3,8 +3,8 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from ..extraction.basal_filtering import extract
-from ..extraction.model.prompts import MODEL_FILES
+from saos_dataset.extraction.basal_filtering import extract
+from saos_dataset.extraction.model.prompts import MODEL_FILES
 
 
 def load_model(model, cache):

@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ...storage.files import write_json
+from saos_dataset.storage.files import write_json
 
 ROOT = Path(__file__).resolve().parents[4]
 REQUEST_COUNTS = {"cached": 0, "computed": 0}

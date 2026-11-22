@@ -5,12 +5,12 @@ import re
 from datetime import date
 from pathlib import Path
 
-from ..clients.api import BASE_URL
-from ..extraction.source.text import MONEY, extract_text
-from ..storage.checkpoints import save_checkpoint
-from ..storage.files import remove_tree
-from ..storage.raw import page_path, read_dataset, read_page
-from ..storage.records import record_complete
+from saos_dataset.clients.api import BASE_URL
+from saos_dataset.extraction.source.text import MONEY, extract_text
+from saos_dataset.storage.checkpoints import save_checkpoint
+from saos_dataset.storage.files import remove_tree
+from saos_dataset.storage.raw import page_path, read_dataset, read_page
+from saos_dataset.storage.records import record_complete
 from .validation import validate_judgment
 
 ROOT = Path(__file__).resolve().parents[3]
