@@ -81,6 +81,18 @@ def fetch_json(url, directory=None, session=None, timeout=30):
     return payload
 
 
+def has_next_page(payload):
+    """Read the continuation relation from a validated SAOS page.
+
+    args:
+        payload: Court or judgment page with validated pagination links.
+
+    returns:
+        Whether another page is advertised.
+    """
+    return any(link["rel"] == "next" for link in payload["links"])
+
+
 def search_parameters(params):
     """Translate saved inclusive date bounds to SAOS search parameters.
 

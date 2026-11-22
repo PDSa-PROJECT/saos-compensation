@@ -38,7 +38,7 @@ def download(config):
                     path = page_path(directory, "common_courts", number)
                     payload = read_page(path) if path.exists() else api.search_courts(number, session, config["timeout"])
                     write_page(path, payload)
-                    checkpoint.update(court_page=number + 1, courts_complete=not any(link["rel"] == "next" for link in payload["links"]))
+                    checkpoint.update(court_page=number + 1, courts_complete=not api.has_next_page(payload))
                     save_checkpoint(directory, checkpoint)
                 while not checkpoint["complete"] and (not config["max_pages"] or checkpoint["page"] < config["max_pages"]):
                     number = checkpoint["page"]
@@ -47,7 +47,7 @@ def download(config):
                     payload = read_page(path) if path.exists() else api.search_judgments(params, session=session, timeout=config["timeout"])
                     api.validate_search_query(payload, params)
                     write_page(path, payload)
-                    checkpoint.update(page=number + 1, complete=not any(link["rel"] == "next" for link in payload["links"]))
+                    checkpoint.update(page=number + 1, complete=not api.has_next_page(payload))
                     save_checkpoint(directory, checkpoint)
                     summary["pages"] += 1
                     summary["judgments"] += len(payload["items"])

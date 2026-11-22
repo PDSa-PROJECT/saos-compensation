@@ -3,6 +3,27 @@
 import re
 
 
+def load_locality_context(fields, directory, timeout):
+    """Initialize snapshot and Polish morphology only for locality predictors.
+
+    args:
+        fields: Selected metadata feature names.
+        directory: Persistent locality snapshot directory.
+        timeout: Snapshot HTTP timeout in seconds.
+
+    returns:
+        Locality rows, morphology and provenance, or None when not selected.
+    """
+    if "court_locality_size" not in fields:
+        return None
+    import morfeusz2
+
+    from ..storage.localities import load_localities
+
+    rows, metadata = load_localities(directory, timeout=timeout)
+    return rows, morfeusz2.Morfeusz(), metadata
+
+
 def locality_class(kind, population):
     """
     Map an official locality type and population to a size category.

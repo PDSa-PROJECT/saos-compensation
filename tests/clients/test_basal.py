@@ -5,17 +5,19 @@ import asyncio
 
 import pytest
 
-from saos_dataset.clients.basal import load_model, open_extractor
+from saos_dataset.clients.basal import load_model, open_extractor, open_server
 from saos_dataset.extraction.model.configuration import load_config
 
 
 @pytest.mark.parametrize("failure", [None, RuntimeError, asyncio.CancelledError])
-def test_worker_is_closed_on_success_failure_and_cancellation(tmp_path, failure):
+@pytest.mark.parametrize("context", [open_extractor, open_server])
+def test_worker_is_closed_on_success_failure_and_cancellation(tmp_path, failure, context):
     """Release the shared worker even when processing fails or is interrupted.
 
     args:
         tmp_path: Isolated model cache location.
         failure: Optional exception raised by the consuming pipeline.
+        context: Combined extractor or target-independent server context.
 
     returns:
         None.
@@ -74,10 +76,11 @@ def test_worker_is_closed_on_success_failure_and_cancellation(tmp_path, failure)
         returns:
             None.
         """
-        async with open_extractor(
-            config, tmp_path, model_loader=model_loader, server_factory=server_factory
-        ) as extract:
-            assert callable(extract)
+        async with context(
+            config if context is open_extractor else config["system_one"],
+            tmp_path, model_loader=model_loader, server_factory=server_factory
+        ) as resource:
+            assert callable(resource) if context is open_extractor else resource.worker is worker
             await asyncio.sleep(0)
             if failure is not None:
                 raise failure()

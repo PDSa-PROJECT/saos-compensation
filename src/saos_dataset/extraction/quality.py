@@ -3,6 +3,29 @@
 from decimal import Decimal, InvalidOperation
 
 
+def admission_decision(result, config):
+    """Combine rejection details and decide whether to retain a completed attempt.
+
+    args:
+        result: Extraction result before metadata enrichment.
+        config: Effective extraction and debug settings.
+
+    returns:
+        Retention flag and rejection reason; retained debug attempts may be invalid.
+    """
+    feature_reason = feature_rejection_reason(result, config)
+    reason = rejection_reason(result, config)
+    if feature_reason and reason != feature_reason:
+        detail = (
+            feature_reason
+            if result.get("fields_evaluated", bool(result.get("features")))
+            else "text feature extraction skipped"
+        )
+        reason = f"{reason}; {detail}"
+    retained = reason is None or (config["processing"]["debug"] and not feature_reason)
+    return retained, reason
+
+
 def rejection_reason(result, config):
     """
     Reject missing or weak targets and leakage in selected feature evidence.

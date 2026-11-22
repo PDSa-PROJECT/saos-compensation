@@ -57,18 +57,32 @@ def search_settings(config, today=None):
         year=end.year - years,
         day=min(end.day, monthrange(end.year - years, end.month)[1]),
     )
-    params = {
-        "all": settings.search_query,
+    return start, end, search_query(settings.search_query, start, end)
+
+
+def search_query(phrase, start, end, page=0):
+    """Build the common-court sentence query for explicit inclusive date bounds.
+
+    args:
+        phrase: Validated search phrase.
+        start: First included judgment date.
+        end: Last included judgment date.
+        page: Zero-based search page.
+
+    returns:
+        Stable internal query parameters used by acquisition and checkpoints.
+    """
+    return {
+        "all": phrase,
         "courtType": "COMMON",
         "judgmentTypes": "SENTENCE",
         "sortingField": "DATABASE_ID",
         "sortingDirection": "ASC",
         "pageSize": 100,
-        "pageNumber": 0,
+        "pageNumber": page,
         "judgmentStartDate": start.isoformat(),
         "judgmentEndDate": end.isoformat(),
     }
-    return start, end, params
 
 
 def load_config(directory=None, overrides=None):
