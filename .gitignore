@@ -55,9 +55,10 @@ Thumbs.db
 /data/*
 !/data/.gitkeep
 
-# Keep only the notebook directory placeholder.
+# Keep the exploration source and ignore local notebooks and outputs.
 /notebooks/*
 !/notebooks/.gitkeep
+!/notebooks/explore_dataset.py
 
 # Keep model caches local, including package markers.
 /basal_weights/*
