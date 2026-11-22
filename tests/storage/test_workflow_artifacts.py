@@ -30,6 +30,8 @@ def test_materializer_publishes_bytes_and_loads_only_reference(tmp_path):
     assert reference.uri == str(destination / "data.parquet")
     assert (destination / "data.parquet").read_bytes() == original
     assert read_rows(reference.uri) == []
+    with open(reference.uri, "rb") as stream:
+        assert read_rows(stream) == []
     with pytest.raises(FileExistsError):
         materializer.save(reference)
 

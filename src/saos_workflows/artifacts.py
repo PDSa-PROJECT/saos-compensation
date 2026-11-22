@@ -1,11 +1,11 @@
 """ZenML-managed plain Parquet files with reference-only loading."""
 
-import shutil
 from dataclasses import dataclass
 
 from zenml import get_step_context
 from zenml.enums import ArtifactType
 from zenml.materializers.base_materializer import BaseMaterializer
+from zenml.io import fileio
 
 from saos_dataset.storage.parquet import read_rows, write_rows
 
@@ -32,11 +32,7 @@ class ParquetMaterializer(BaseMaterializer):
             None.
         """
         destination = self.uri.rstrip("/") + "/data.parquet"
-        if self.artifact_store.exists(destination):
-            raise FileExistsError(destination)
-        with open(data.uri, "rb") as source:
-            with self.artifact_store.open(destination, "wb") as target:
-                shutil.copyfileobj(source, target)
+        fileio.copy(data.uri, destination, overwrite=False)
 
     def load(self, data_type):
         """Resolve the managed object without downloading or reading the table.
@@ -76,9 +72,5 @@ def read_artifact(artifact):
         Validated stage rows in their original order.
     """
     materializer = get_step_context().get_output_materializer()
-    with materializer.get_temporary_directory(delete_at_exit=True) as directory:
-        path = directory + "/input.parquet"
-        with materializer.artifact_store.open(artifact.uri, "rb") as source:
-            with open(path, "wb") as target:
-                shutil.copyfileobj(source, target)
-        return read_rows(path)
+    with materializer.artifact_store.open(artifact.uri, "rb") as source:
+        return read_rows(source)
