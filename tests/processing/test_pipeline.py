@@ -107,7 +107,7 @@ def test_pipeline_writes_separate_outputs_and_closes_extractor(
         assert "final award verification not run" in output
     directory = tmp_path / "tmp/processed"
     path = directory / "42"
-    from saos_workflows.operations.features import extract_feature_rows
+    from saos_workflows.pipelines.extract_features import extract_feature_rows
 
     source_record = next(record_source())
     prepared = asyncio.run(extract(source_record["text"], source_record["id"]))
