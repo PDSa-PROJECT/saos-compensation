@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from dataset.extraction.model import configuration
+from saos_dataset.extraction.model import configuration
 
 
 @pytest.mark.parametrize(

@@ -4,8 +4,8 @@ import asyncio
 
 import yaml
 
-from dataset.extraction import features
-from dataset.extraction.model import configuration, decisions
+from saos_dataset.extraction import features
+from saos_dataset.extraction.model import configuration, decisions
 
 
 def test_configured_question_is_used_for_extraction_and_relevance(

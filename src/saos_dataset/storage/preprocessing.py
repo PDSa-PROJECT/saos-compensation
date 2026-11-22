@@ -29,6 +29,10 @@ class ArtifactUnpickler(pickle.Unpickler):
         """
         if module.startswith("src.dataset.preprocessing."):
             module = module.removeprefix("src.")
+        if module.startswith("dataset.preprocessing."):
+            module = module.replace(
+                "dataset.preprocessing.", "saos_dataset.preprocessing.", 1
+            )
         return super().find_class(module, name)
 
 

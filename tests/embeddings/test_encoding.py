@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dataset.embeddings import create_embeddings, encoding
+from saos_dataset.embeddings import create_embeddings, encoding
 
 SETTINGS = {
     "model": "test",

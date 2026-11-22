@@ -2,7 +2,7 @@
 
 import pytest
 
-from dataset.processing.settings import validate_settings
+from saos_dataset.processing.settings import validate_settings
 
 
 @pytest.mark.parametrize("overrides", [
@@ -39,7 +39,7 @@ def test_processing_rejects_resolved_path_overlap(monkeypatch, tmp_path, alias):
     returns:
         None.
     """
-    from dataset.processing import settings
+    from saos_dataset.processing import settings
 
     monkeypatch.setattr(settings, "ROOT", tmp_path)
     raw = tmp_path / "raw"

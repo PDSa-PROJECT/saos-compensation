@@ -20,7 +20,7 @@ def isolate_runtime_sources(monkeypatch, tmp_path):
     returns:
         None.
     """
-    from dataset.settings import RuntimeSettings
+    from saos_dataset.settings import RuntimeSettings
 
     for name in tuple(os.environ):
         if name.lower() in RuntimeSettings.model_fields:

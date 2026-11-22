@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dataset.extraction.model.configuration import load_config, read_config
-from dataset.settings import RuntimeSettings
+from saos_dataset.extraction.model.configuration import load_config, read_config
+from saos_dataset.settings import RuntimeSettings
 
 
 def test_source_precedence(config_directory, monkeypatch):
@@ -94,7 +94,7 @@ def test_checkpoint_compatibility(config_directory, monkeypatch, output_root):
     returns:
         None.
     """
-    from dataset.storage import checkpoints
+    from saos_dataset.storage import checkpoints
 
     overrides = {"output_path": "dataset"}
     config = load_config(config_directory, overrides)

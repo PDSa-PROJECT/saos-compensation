@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import torch
 import pytest
 
-from dataset.embeddings.target_matching import TargetMatcher, candidate_sentences, prepare_text
-from dataset.extraction.model.configuration import load_config
-from dataset.extraction.targets import target_extraction
+from saos_dataset.embeddings.target_matching import TargetMatcher, candidate_sentences, prepare_text
+from saos_dataset.extraction.model.configuration import load_config
+from saos_dataset.extraction.targets import target_extraction
 
 
 def test_above_threshold_exclusion_blocks_a_higher_target_score(monkeypatch):
@@ -40,7 +40,7 @@ def test_above_threshold_exclusion_blocks_a_higher_target_score(monkeypatch):
             return torch.tensor([[1.0, 0.0] if label == "judgment" else [0.9, 0.4] if label == "procedural_costs" else [-1.0, 0.0] for label in patterns])
         return torch.tensor([[1.0, 0.0] for _ in texts])
 
-    from dataset.embeddings import cosine_similarity as cosine_module
+    from saos_dataset.embeddings import cosine_similarity as cosine_module
 
     original = cosine_module.cosine_similarity
     comparisons = []
@@ -109,8 +109,8 @@ def test_unchanged_appeal_is_rejected_without_loading_models(monkeypatch):
     returns:
         None.
     """
-    from dataset.embeddings import target_matching
-    from dataset.extraction import basal_filtering
+    from saos_dataset.embeddings import target_matching
+    from saos_dataset.extraction import basal_filtering
 
     text = "WYROK\nI. oddala apelację;\nII. zasądza 5400 zł tytułem zwrotu kosztów procesu.\nUZASADNIENIE\nWcześniej zasądzono 100000 zł."
     monkeypatch.setattr(target_matching, "cached_matcher", lambda *args: (_ for _ in ()).throw(AssertionError("Unexpected model loading")))
@@ -163,7 +163,7 @@ def test_unmatched_current_principal_still_blocks_a_zero_target(monkeypatch):
     returns:
         None.
     """
-    from dataset.embeddings import target_matching
+    from saos_dataset.embeddings import target_matching
 
     empty = dict.fromkeys(target_matching.PATTERN_CLASSES)
     matcher = SimpleNamespace(match=lambda text: empty, match_denial=lambda text: (_ for _ in ()).throw(AssertionError("Current principal forbids zero")))
@@ -204,7 +204,7 @@ def test_modified_appeal_with_current_principal_is_not_excluded(monkeypatch):
     returns:
         None.
     """
-    from dataset.embeddings import target_matching
+    from saos_dataset.embeddings import target_matching
 
     text = "WYROK\nI. zmienia wyrok w ten sposób, że zasądza na rzecz A. B. kwotę 1000 zł.\nII. oddala apelację w pozostałej części.\nUZASADNIENIE"
     expected = {**dict.fromkeys(target_matching.PATTERN_CLASSES), "judgment": {"operative": True}}

@@ -5,10 +5,10 @@ import json
 import pytest
 import requests
 
-from dataset.acquisition import download
-from dataset.acquisition.settings import load_config
-from dataset.storage import checkpoints
-from dataset.storage.raw import page_path, read_page
+from saos_dataset.acquisition import download
+from saos_dataset.acquisition.settings import load_config
+from saos_dataset.storage import checkpoints
+from saos_dataset.storage.raw import page_path, read_page
 
 
 @pytest.fixture

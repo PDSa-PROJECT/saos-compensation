@@ -1,8 +1,8 @@
 
 import pytest
 
-from dataset.extraction.source.text import MONEY, amount_in_pln
-from dataset.extraction.targets import amounts
+from saos_dataset.extraction.source.text import MONEY, amount_in_pln
+from saos_dataset.extraction.targets import amounts
 
 
 @pytest.mark.parametrize(

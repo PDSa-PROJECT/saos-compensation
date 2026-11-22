@@ -1,4 +1,4 @@
-"""Run raw acquisition with python -m dataset.cli."""
+"""Run raw acquisition with python -m saos_dataset.cli."""
 
 from .main import main
 

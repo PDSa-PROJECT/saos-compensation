@@ -2,7 +2,7 @@
 
 import pytest
 
-from dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import configuration as config_module
 
 
 @pytest.mark.parametrize(
@@ -27,7 +27,7 @@ def test_injured_party_count_is_a_numeric_feature(award, expected):
     returns:
         None.
     """
-    from dataset.processing.metadata import add_metadata_features
+    from saos_dataset.processing.metadata import add_metadata_features
 
     result = {
         "features": {},
@@ -60,8 +60,8 @@ def test_prior_payment_is_exported_only_in_record(tmp_path, prior_payment):
     """
     import json
 
-    from dataset.processing.metadata import add_metadata_features
-    from dataset.storage.records import write_result
+    from saos_dataset.processing.metadata import add_metadata_features
+    from saos_dataset.storage.records import write_result
 
     config = config_module.load_config(overrides={"debug": True})
     result = {

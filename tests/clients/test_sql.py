@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from dataset.clients.sql import read_localities
+from saos_dataset.clients.sql import read_localities
 
 
 def test_reads_locality_rows_without_changing_snapshot(locality_database):

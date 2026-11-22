@@ -74,15 +74,15 @@ def write_result(result, directory, config):
 
 def record_complete(path, identifier, dataset_id):
     """
-    Check whether a saved record belongs to the current dataset.
+    Check whether a saved record belongs to the current saos_dataset.
 
     args:
         path: Path to the relevant input or output file.
         identifier: Stable judgment identifier.
-        dataset_id: Identifier shared by records in this dataset.
+        dataset_id: Identifier shared by records in this saos_dataset.
 
     returns:
-        True when a complete record matches the judgment and dataset.
+        True when a complete record matches the judgment and saos_dataset.
     """
     if not path.exists():
         return False

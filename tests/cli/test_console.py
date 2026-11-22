@@ -36,4 +36,4 @@ def test_raw_cli_imports_no_processing_or_inference_modules():
     returns:
         None.
     """
-    subprocess.run([sys.executable, "-c", "import dataset.cli.main; import sys; assert not any(name in sys.modules for name in ('torch', 'transformers', 'basal', 'dataset.processing.pipeline', 'dataset.extraction'))"], check=True)
+    subprocess.run([sys.executable, "-c", "import saos_dataset.cli.main; import sys; assert not any(name in sys.modules for name in ('torch', 'transformers', 'basal', 'saos_dataset.processing.pipeline', 'saos_dataset.extraction'))"], check=True)

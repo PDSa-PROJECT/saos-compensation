@@ -4,10 +4,10 @@ import asyncio
 
 import pytest
 
-from dataset.extraction import basal_filtering
-from dataset.extraction.model import configuration, decisions
-from dataset.extraction.quality import target_rejection_reason
-from dataset.extraction.targets import target_extraction
+from saos_dataset.extraction import basal_filtering
+from saos_dataset.extraction.model import configuration, decisions
+from saos_dataset.extraction.quality import target_rejection_reason
+from saos_dataset.extraction.targets import target_extraction
 
 
 @pytest.mark.parametrize("debug", [False, True])

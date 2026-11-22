@@ -6,7 +6,7 @@ import json
 import numpy as np
 import pytest
 
-from dataset.preprocessing import FeaturePreprocessor, TargetPreprocessor, load_records
+from saos_dataset.preprocessing import FeaturePreprocessor, TargetPreprocessor, load_records
 
 
 @pytest.fixture
@@ -306,7 +306,7 @@ def test_default_checkpoint_path_is_independent_of_working_directory(
     returns:
         None.
     """
-    from dataset.storage import preprocessing as artifacts
+    from saos_dataset.storage import preprocessing as artifacts
 
     assert artifacts.DEFAULT_PATH == project_root / "checkpoints/preprocessing/feature_preprocessor.pkl"
     destination = tmp_path / "checkpoints/preprocessing/feature_preprocessor.pkl"
@@ -340,7 +340,7 @@ def test_target_scaling_is_saved_separately_and_never_refits(
     returns:
         None.
     """
-    from dataset.storage import preprocessing as artifacts
+    from saos_dataset.storage import preprocessing as artifacts
 
     assert artifacts.DEFAULT_TARGET_PATH == project_root / "checkpoints/preprocessing/target_preprocessor.pkl"
     predictor_path = tmp_path / "feature_preprocessor.pkl"
@@ -375,12 +375,14 @@ def test_target_scaling_is_saved_separately_and_never_refits(
 
 
 @pytest.mark.parametrize("kind", ["features", "target"])
-def test_previous_package_artifacts_remain_loadable(tmp_path, kind):
+@pytest.mark.parametrize("module", ["dataset.preprocessing.", "src.dataset.preprocessing."])
+def test_previous_package_artifacts_remain_loadable(tmp_path, kind, module):
     """Restore fitted version-4 artifacts saved with the previous import namespace.
 
     args:
         tmp_path: Isolated trusted artifact directory.
         kind: Predictor or target preprocessing artifact to restore.
+        module: Historical preprocessing module path in the pickle.
 
     returns:
         None.
@@ -389,7 +391,7 @@ def test_previous_package_artifacts_remain_loadable(tmp_path, kind):
 
     import sklearn
 
-    from dataset.storage.preprocessing import VERSION
+    from saos_dataset.storage.preprocessing import VERSION
 
     records = [{"prior_payment": 0}, {"prior_payment": 100}]
     settings = {"feature_fields": ["prior_payment"]}
@@ -400,9 +402,9 @@ def test_previous_package_artifacts_remain_loadable(tmp_path, kind):
     )
     payload = {"version": VERSION, "sklearn": sklearn.__version__, "state": model}
     content = pickle.dumps(payload, protocol=0).replace(
-        b"cdataset.preprocessing.", b"csrc.dataset.preprocessing."
+        b"csaos_dataset.preprocessing.", f"c{module}".encode()
     )
-    assert b"csrc.dataset.preprocessing." in content
+    assert f"c{module}".encode() in content
     path = tmp_path / "previous.pkl"
     path.write_bytes(content)
     restored = type(model).load(path)

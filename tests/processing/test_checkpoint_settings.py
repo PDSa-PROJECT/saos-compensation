@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from dataset.extraction.model import configuration
+from saos_dataset.extraction.model import configuration
 
 
 def test_changed_question_invalidates_checkpoint(
@@ -23,8 +23,8 @@ def test_changed_question_invalidates_checkpoint(
     returns:
         None.
     """
-    from dataset.storage import checkpoints
-    from dataset.storage.files import write_json
+    from saos_dataset.storage import checkpoints
+    from saos_dataset.storage.files import write_json
 
     config = configuration.load_config(config_directory)
     monkeypatch.setattr(checkpoints, "ROOT", tmp_path)
@@ -52,7 +52,7 @@ def test_changed_amount_context_invalidates_processing_checkpoint(config_directo
     returns:
         None.
     """
-    from dataset.storage import checkpoints
+    from saos_dataset.storage import checkpoints
 
     config = configuration.load_config(config_directory)
     state = checkpoints.load_checkpoint(config)

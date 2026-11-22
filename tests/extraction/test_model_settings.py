@@ -4,8 +4,8 @@ import shutil
 
 import pytest
 
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.model import decisions, prompts
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import decisions, prompts
 
 FIELD_NAMES = {
     "zdarzenie_i_okolicznosci": "event_circumstances",

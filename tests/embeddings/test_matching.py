@@ -8,7 +8,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 
-from dataset.embeddings.target_matching import (
+from saos_dataset.embeddings.target_matching import (
     PATTERN_CLASSES,
     TargetMatcher,
     prepare_text,
@@ -239,7 +239,7 @@ def test_exclusion_winner_does_not_become_target_and_keeps_other_candidates(
     returns:
         None.
     """
-    from dataset.embeddings.target_matching import candidate_sentences
+    from saos_dataset.embeddings.target_matching import candidate_sentences
 
     count = len(candidate_sentences(text, SETTINGS["candidate_keywords"]))
     matcher = TargetMatcher(SETTINGS, PATTERNS, Encoder([vector] * count + [[1.0, 0.0]]))
@@ -286,7 +286,7 @@ def test_recipient_list_before_comma_reaches_amount_parser(monkeypatch):
     """
     import asyncio
 
-    from dataset.extraction.targets import target_extraction
+    from saos_dataset.extraction.targets import target_extraction
 
     text = "Zasądza na rzecz A. B., C. D. kwoty po 100 zł."
     encoder = Encoder([[1, 0]])
@@ -322,9 +322,9 @@ def test_mutual_cost_settlement_is_excluded_without_denial(monkeypatch, with_awa
     import asyncio
     from types import SimpleNamespace
 
-    from dataset.embeddings import target_matching
-    from dataset.extraction.model.configuration import load_config
-    from dataset.extraction.targets.target_extraction import extract_targets
+    from saos_dataset.embeddings import target_matching
+    from saos_dataset.extraction.model.configuration import load_config
+    from saos_dataset.extraction.targets.target_extraction import extract_targets
 
     config = load_config()
     config["embedding"]["device"] = "cpu"

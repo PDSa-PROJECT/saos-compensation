@@ -1,7 +1,7 @@
 
 import pytest
 
-from dataset.processing.metadata import add_metadata_features
+from saos_dataset.processing.metadata import add_metadata_features
 
 
 @pytest.mark.parametrize(
@@ -124,7 +124,7 @@ def test_court_type_is_read_directly_from_saos_and_remains_distinct_from_instanc
     returns:
         None.
     """
-    from dataset.preprocessing import FeaturePreprocessor
+    from saos_dataset.preprocessing import FeaturePreprocessor
 
     result = {"instance": {"value": "nieustalona", "decision": {"confidence": 0.0}}, "features": {}, "evidence": {}, "confidence": {}, "field_status": {}}
     record = {"judgmentDate": "2020-05-12", "division": {"court": {"name": "Sąd Okręgowy w Warszawie", "type": "REGIONAL"}}}

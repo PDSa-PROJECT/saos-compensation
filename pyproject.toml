@@ -22,12 +22,12 @@ dependencies = [
 ]
 
 [project.scripts]
-get-raw-data = "dataset.cli.main:main"
-process-data = "dataset.cli.process:main"
+get-raw-data = "saos_dataset.cli.main:main"
+process-data = "saos_dataset.cli.process:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["dataset*"]
+include = ["saos_dataset*"]
 
 [project.optional-dependencies]
 extraction = [

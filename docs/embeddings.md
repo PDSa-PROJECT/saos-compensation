@@ -5,8 +5,8 @@
 ## Reusable embeddings
 
 ```python
-from dataset import load_config
-from dataset.embeddings import create_embeddings
+from saos_dataset import load_config
+from saos_dataset.embeddings import create_embeddings
 
 settings = load_config()["embedding"]
 vectors = create_embeddings(["Opis szkody.", "Ograniczenia w pracy."], settings)

@@ -4,9 +4,9 @@ import asyncio
 
 import pytest
 
-from dataset.extraction import features as features_module
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.model import decisions
+from saos_dataset.extraction import features as features_module
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import decisions
 
 
 @pytest.mark.parametrize("treatment_in_findings", [False, True])

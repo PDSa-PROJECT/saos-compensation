@@ -2,8 +2,8 @@
 
 import pytest
 
-from dataset.embeddings.encoding import cached_encoder
-from dataset.embeddings.target_matching import cached_matcher
+from saos_dataset.embeddings.encoding import cached_encoder
+from saos_dataset.embeddings.target_matching import cached_matcher
 
 
 @pytest.fixture(autouse=True)

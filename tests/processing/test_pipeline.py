@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from dataset.processing import pipeline
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.targets import amounts
+from saos_dataset.processing import pipeline
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.targets import amounts
 
 
 @pytest.mark.parametrize("text_field", ["cause", "damage", "limitations"])
@@ -149,7 +149,7 @@ def test_failed_extraction_keeps_pending_state_for_resume(
     returns:
         None.
     """
-    from dataset.extraction.model import decisions
+    from saos_dataset.extraction.model import decisions
 
     config = config_module.load_config()
     config["processing"].update(debug=False, max_gib=0)
@@ -198,7 +198,7 @@ def test_completed_checkpoint_does_not_start_extraction(output_root, fake_extrac
     returns:
         None.
     """
-    from dataset.storage.checkpoints import load_checkpoint, save_checkpoint
+    from saos_dataset.storage.checkpoints import load_checkpoint, save_checkpoint
 
     config = config_module.load_config()
     config["processing"]["max_gib"] = 0

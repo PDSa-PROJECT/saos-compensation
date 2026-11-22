@@ -2,8 +2,8 @@
 
 import pytest
 
-from dataset.extraction.features import select_facts
-from dataset.extraction.source.text import EVIDENCE_MARKER
+from saos_dataset.extraction.features import select_facts
+from saos_dataset.extraction.source.text import EVIDENCE_MARKER
 
 
 @pytest.mark.parametrize("text", [

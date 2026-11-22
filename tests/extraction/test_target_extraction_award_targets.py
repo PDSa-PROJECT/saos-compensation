@@ -4,10 +4,10 @@ import asyncio
 
 import pytest
 
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.model import decisions
-from dataset.extraction.targets import amounts
-from dataset.extraction.targets import target_extraction as extraction
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import decisions
+from saos_dataset.extraction.targets import amounts
+from saos_dataset.extraction.targets import target_extraction as extraction
 
 
 @pytest.mark.parametrize(

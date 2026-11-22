@@ -6,7 +6,7 @@ import sys
 import pytest
 
 
-@pytest.mark.parametrize("module,flag", [("dataset.cli", "--download-path"), ("dataset.cli.process", "--input-path")])
+@pytest.mark.parametrize("module,flag", [("saos_dataset.cli", "--download-path"), ("saos_dataset.cli.process", "--input-path")])
 def test_module_help(tmp_path, module, flag):
     """Run each CLI module outside the checkout without source-path modifications.
 

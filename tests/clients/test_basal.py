@@ -5,8 +5,8 @@ import asyncio
 
 import pytest
 
-from dataset.clients.basal import load_model, open_extractor
-from dataset.extraction.model.configuration import load_config
+from saos_dataset.clients.basal import load_model, open_extractor
+from saos_dataset.extraction.model.configuration import load_config
 
 
 @pytest.mark.parametrize("failure", [None, RuntimeError, asyncio.CancelledError])

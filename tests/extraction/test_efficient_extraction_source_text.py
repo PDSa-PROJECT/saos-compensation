@@ -2,8 +2,8 @@
 
 import pytest
 
-from dataset.extraction.source import passages
-from dataset.extraction.source.text import MONEY, amount_in_pln
+from saos_dataset.extraction.source import passages
+from saos_dataset.extraction.source.text import MONEY, amount_in_pln
 
 
 @pytest.mark.parametrize(

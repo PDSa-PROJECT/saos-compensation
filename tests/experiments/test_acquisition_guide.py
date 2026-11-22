@@ -14,23 +14,23 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 
-from dataset.cli import main as cli
-from dataset.clients import api
-from dataset.storage import checkpoints
-from dataset.acquisition import pipeline
-from dataset.acquisition import download as acquisition
-from dataset.extraction import basal_filtering as basal
-from dataset.extraction.model import configuration as config_module
-from dataset.extraction.model import decisions, prompts
-from dataset.extraction.source.text import (
+from saos_dataset.cli import main as cli
+from saos_dataset.clients import api
+from saos_dataset.storage import checkpoints
+from saos_dataset.acquisition import pipeline
+from saos_dataset.acquisition import download as acquisition
+from saos_dataset.extraction import basal_filtering as basal
+from saos_dataset.extraction.model import configuration as config_module
+from saos_dataset.extraction.model import decisions, prompts
+from saos_dataset.extraction.source.text import (
     CURRENCY,
     MONEY,
     amount_in_pln,
     extract_text,
 )
-from dataset.extraction.targets import amounts
-from dataset.storage import files as storage
-from dataset.storage import records
+from saos_dataset.extraction.targets import amounts
+from saos_dataset.storage import files as storage
+from saos_dataset.storage import records
 
 CONFIG = {
     "max_age_years": 10,

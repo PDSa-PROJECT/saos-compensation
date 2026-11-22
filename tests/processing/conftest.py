@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from dataset.processing import pipeline, source
-from dataset.storage import checkpoints
-from dataset.storage.files import write_json
-from dataset.acquisition.settings import load_config, search_settings
+from saos_dataset.processing import pipeline, source
+from saos_dataset.storage import checkpoints
+from saos_dataset.storage.files import write_json
+from saos_dataset.acquisition.settings import load_config, search_settings
 
 
 @pytest.fixture
