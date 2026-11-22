@@ -60,6 +60,24 @@ def create_server(model, model_path):
 
 
 @asynccontextmanager
+async def open_worker(server):
+    """Keep one server worker alive and cancel it when its context exits.
+
+    args:
+        server: Basal inference server exposing an async worker method.
+
+    returns:
+        Async context yielding the server while its worker task is scheduled.
+    """
+    worker = asyncio.create_task(server.worker())
+    try:
+        yield server
+    finally:
+        worker.cancel()
+        await asyncio.gather(worker, return_exceptions=True)
+
+
+@asynccontextmanager
 async def open_extractor(config, cache, *, model_loader=None, server_factory=None):
     """Keep one model worker alive and close it on success, failure or cancellation.
 
@@ -76,7 +94,6 @@ async def open_extractor(config, cache, *, model_loader=None, server_factory=Non
     server_factory = create_server if server_factory is None else server_factory
     model = config["system_one"]
     server = server_factory(model, model_loader(model, cache))
-    worker = asyncio.create_task(server.worker())
 
     async def extract_record(text, identifier):
         """Extract a judgment using the shared server and fixed configuration.
@@ -90,8 +107,5 @@ async def open_extractor(config, cache, *, model_loader=None, server_factory=Non
         """
         return await extract(server, text, config, identifier)
 
-    try:
+    async with open_worker(server):
         yield extract_record
-    finally:
-        worker.cancel()
-        await asyncio.gather(worker, return_exceptions=True)
