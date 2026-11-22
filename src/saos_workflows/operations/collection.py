@@ -12,7 +12,7 @@ from saos_dataset.clients import api
 from saos_dataset.processing.source import read_divisions, select_judgment
 from saos_dataset.settings import FiniteNumber, NonblankString
 
-from .rows import write_rows
+from saos_dataset.storage.parquet import write_rows
 
 
 @validate_call(config=ConfigDict(strict=True, arbitrary_types_allowed=True))

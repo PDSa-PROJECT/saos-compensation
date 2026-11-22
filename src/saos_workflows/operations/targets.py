@@ -9,7 +9,7 @@ from saos_dataset.extraction.model.configuration import load_config
 from saos_dataset.extraction.quality import target_rejection_reason
 from saos_dataset.extraction.targets.amounts import extract_award
 
-from .rows import read_rows, write_rows
+from saos_dataset.storage.parquet import read_rows, write_rows
 
 
 async def find_target_rows(rows, config, *, extractor=None):

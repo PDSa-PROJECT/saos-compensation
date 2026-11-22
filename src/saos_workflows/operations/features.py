@@ -12,7 +12,7 @@ from saos_dataset.processing.metadata import add_metadata_features
 from saos_dataset.processing.localities import load_locality_context
 from saos_dataset.processing.pipeline import check_device
 
-from .rows import read_rows, write_rows
+from saos_dataset.storage.parquet import read_rows, write_rows
 
 
 async def extract_feature_rows(rows, config, server, *, localities=None, extractor=None):
